@@ -40,7 +40,6 @@ struct PrimaryButtonStyle: ButtonStyle {
             .compositingGroup()
             .animation(.easeInOut(duration: 0.33))
             .cornerRadius(8.0, antialiased: true)
-            .shadow(radius: 4)
             .opacity(configuration.isPressed ? 0.95 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
     }
