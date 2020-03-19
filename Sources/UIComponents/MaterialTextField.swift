@@ -19,6 +19,7 @@ public struct MaterialTextField: View {
                 Text(title)
                     .id("Header")
                     .font(.caption)
+                    .animation(.easeInOut)
                     .transition(.opacity)
             }
             
@@ -28,16 +29,17 @@ public struct MaterialTextField: View {
                       onCommit: returnedPressed).id(title)
                 .font(.body)
                 .padding(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4))
+                .background(Color(UIColor.systemBackground))
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color(UIColor.label), lineWidth: 1)
+                        .stroke(Color(UIColor.secondaryLabel), lineWidth: 1)
             )
         }
     }
     
     public init(title: String, text: Binding<String>) {
         self.title = title
-        self._text = text
+        self._text = text.animation()
     }
     
     private func editingChanged(_ editing: Bool) {

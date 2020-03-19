@@ -10,7 +10,7 @@ import SwiftUI
 import Combine
 
 
-//    From https://stackoverflow.com/a/57147043
+//From https://stackoverflow.com/a/57147043
 public struct AdjustsForKeyboard: ViewModifier {
 
     @State var currentHeight: CGFloat = 0
@@ -24,6 +24,11 @@ public struct AdjustsForKeyboard: ViewModifier {
         .publisher(for: UIResponder.keyboardWillHideNotification)
         .map { _ in CGFloat.zero }
     
+    private let keyboardFrameWillChange = NotificationCenter.default
+        .publisher(for: UIResponder.keyboardDidChangeFrameNotification)
+        .map { $0.userInfo![UIResponder.keyboardFrameEndUserInfoKey] as! CGRect }
+        .map { $0.height }
+    
     public init() {
         
     }
@@ -36,9 +41,12 @@ public struct AdjustsForKeyboard: ViewModifier {
     }
 
     private func subscribeToKeyboardEvents() {
-        _ = Publishers.Merge(keyboardWillOpen, keyboardWillHide)
+        _ = keyboardWillOpen
+            .merge(with: keyboardFrameWillChange)
+            .merge(with: keyboardWillHide)
             .subscribe(on: RunLoop.main)
             .assign(to: \.currentHeight, on: self)
+        
     }
     
 }

@@ -41,7 +41,6 @@ struct UnstyledList_Previews: PreviewProvider {
                     .background(Color.orange)
                     .foregroundColor(Color.white)
                     .cornerRadius(8)
-                
             }.buttonStyle(PlainButtonStyle())
         }
     }
