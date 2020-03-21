@@ -1,5 +1,5 @@
 //
-//  RoundedPaddedBackground.swift
+//  RoundedPaddedBackgroundModifier.swift
 //  Beans
 //
 //  Created by Jordan Gustafson on 3/1/20.
@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-public struct RoundedPaddedBackground: ViewModifier {
+public struct RoundedPaddedBackgroundModifier: ViewModifier {
     
     let paddingInsets: EdgeInsets?
     let backgroundColor: Color
