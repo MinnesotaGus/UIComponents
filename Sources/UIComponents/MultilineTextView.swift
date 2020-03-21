@@ -15,6 +15,10 @@ public struct MultilineTextView: UIViewRepresentable {
     public init(text: Binding<String>) {
         self._text = text
     }
+    
+    public func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
 
     public func makeUIView(context: Context) -> UITextView {
         let view = UITextView()
@@ -24,13 +28,39 @@ public struct MultilineTextView: UIViewRepresentable {
         view.layer.borderColor = UIColor.gray.cgColor
         view.layer.borderWidth = 1
         view.layer.cornerRadius = 8
+        view.delegate = context.coordinator
         return view
     }
 
     public func updateUIView(_ uiView: UITextView, context: Context) {
         uiView.text = text
     }
+    
 }
+
+extension MultilineTextView {
+    
+    public class Coordinator : NSObject, UITextViewDelegate {
+
+        let text: Binding<String>
+
+        init(text: Binding<String>) {
+            self.text = text
+        }
+
+        public func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+            return true
+        }
+
+        public func textViewDidChange(_ textView: UITextView) {
+            text.wrappedValue = textView.text
+        }
+        
+    }
+    
+}
+
+//MARK: - Previews
 
 struct MultiLineTextView_Previews: PreviewProvider {
     
@@ -39,4 +69,6 @@ struct MultiLineTextView_Previews: PreviewProvider {
     static var previews: some View {
         MultilineTextView(text: $text)
     }
+    
 }
+

@@ -24,11 +24,6 @@ public struct AdjustsForKeyboard: ViewModifier {
         .publisher(for: UIResponder.keyboardWillHideNotification)
         .map { _ in CGFloat.zero }
     
-    private let keyboardFrameWillChange = NotificationCenter.default
-        .publisher(for: UIResponder.keyboardDidChangeFrameNotification)
-        .map { $0.userInfo![UIResponder.keyboardFrameEndUserInfoKey] as! CGRect }
-        .map { $0.height }
-    
     public init() {
         
     }
@@ -42,7 +37,6 @@ public struct AdjustsForKeyboard: ViewModifier {
 
     private func subscribeToKeyboardEvents() {
         _ = keyboardWillOpen
-            .merge(with: keyboardFrameWillChange)
             .merge(with: keyboardWillHide)
             .subscribe(on: RunLoop.main)
             .assign(to: \.currentHeight, on: self)

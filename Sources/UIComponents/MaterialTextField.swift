@@ -47,7 +47,7 @@ public struct MaterialTextField: View {
     }
     
     private func returnedPressed() {
-        print("Return")
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
 }
