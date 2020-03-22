@@ -22,7 +22,6 @@ public struct MaterialTextField: View {
                     .animation(.easeInOut)
                     .transition(.opacity)
             }
-            
             TextField(text.isEmpty ? title : "",
                       text: $text,
                       onEditingChanged: editingChanged(_:),
