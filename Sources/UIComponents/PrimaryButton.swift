@@ -42,6 +42,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             .cornerRadius(8.0, antialiased: true)
             .opacity(configuration.isPressed ? 0.95 : 1.0)
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .modifier(BackwardsCompatibleHoverEffectModifier())
     }
 }
 
@@ -53,6 +54,7 @@ struct RoundedButton_Previews: PreviewProvider {
             }) {
                 Text("Light mode")
             }.previewLayout(.sizeThatFits).padding()
+            
             PrimaryButton(action: {
                 print("Save tapped")
             }) {
