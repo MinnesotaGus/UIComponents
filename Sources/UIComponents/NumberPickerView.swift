@@ -9,7 +9,7 @@
 import SwiftUI
 import Combine
 
-struct NumberPickerView: View {
+public struct NumberPickerView: View {
     
     static let formatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -18,11 +18,11 @@ struct NumberPickerView: View {
         return formatter
     }()
     
-    @Binding var value: Double
+    @Binding public var value: Double
     
-    @State var contentOffset: CGFloat = 0.0
+    @State public var contentOffset: CGFloat = 0.0
     
-    var number: Double {
+    public var number: Double {
         let value = Double(contentOffset / 100.0)
         guard value >= 0.0 else {
             return 0.0
@@ -30,12 +30,12 @@ struct NumberPickerView: View {
         return value
     }
     
-    let minValue: Double
-    let maxValue: Double
+    public let minValue: Double
+    public let maxValue: Double
     
-    let tickGroups: [TickMarkGroup]
+    private let tickGroups: [TickMarkGroup]
     
-    init(value: Binding<Double>, minValue: Double, maxValue: Double) {
+    public init(value: Binding<Double>, minValue: Double, maxValue: Double) {
         self._value = value
         self.minValue = minValue
         self.maxValue = maxValue
@@ -43,7 +43,7 @@ struct NumberPickerView: View {
         self.tickGroups = array.map { _ in TickMarkGroup(numberOfTicks: 10) }
     }
     
-    var body: some View {
+    public var body: some View {
         TrackableScrollView(.horizontal, showIndicators: false, contentOffset: $contentOffset) {
             HStack(alignment: .bottom, spacing: 8) {
                 ForEach(tickGroups, id: \.self) { (tickMarkGroup) in
