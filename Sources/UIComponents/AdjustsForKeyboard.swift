@@ -30,7 +30,7 @@ public struct AdjustsForKeyboard: ViewModifier {
                 Spacer()
             }
         }
-        .animation(.easeInOut(duration: 0.3))
+        .animation(.easeOut(duration: 0.16))
     }
     
     private func hideKeyboard() {
@@ -38,16 +38,19 @@ public struct AdjustsForKeyboard: ViewModifier {
     }
 
     private func hideKeyboardButtonView() -> some View {
-        if keyboardListener.keyboardHeight > 0.0 {
-            return AnyView(Button(action: { self.hideKeyboard() }) {
-                Image(systemName: "keyboard.chevron.compact.down")
-                    .padding()
-                    .background(Color(UIColor.tertiarySystemBackground))
-                    .clipShape(Circle())
-                    .accentColor(.orange)
-            })
-        } else {
-            return AnyView(Spacer())
+        VStack {
+            if keyboardListener.keyboardHeight > 0 && showsHideKeyboardButton {
+                Button(action: { self.hideKeyboard() }) {
+                    Image(systemName: "keyboard.chevron.compact.down")
+                        .padding()
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .clipShape(Circle())
+                        .accentColor(.orange)
+                        .shadow(radius: 1)
+                }.transition(.opacity)
+            }
+            Spacer()
+                .frame(height: 8)
         }
     }
     
@@ -55,6 +58,14 @@ public struct AdjustsForKeyboard: ViewModifier {
         return keyboardListener.keyboardHeight > 0 ? proxy.safeAreaInsets.bottom : 0.0
     }
 
+}
+
+extension View {
+    
+    public func avoidsKeyboard(showsHideKeyboardButton: Bool = true) -> some View {
+        ModifiedContent(content: self, modifier: AdjustsForKeyboard(showsHideKeyboardButton: true))
+    }
+    
 }
 
 fileprivate class KeyboardListener: ObservableObject {
