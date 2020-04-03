@@ -24,9 +24,9 @@ public struct AdjustsForKeyboard: ViewModifier {
         GeometryReader { proxy in
             VStack {
                 content
-                    .overlay(self.hideKeyboardButtonView(), alignment: .bottomTrailing)
                     .edgesIgnoringSafeArea(.bottom)
-                    .frame(height: (proxy.size.height - self.keyboardListener.keyboardHeight), alignment: .top)
+                    .overlay(self.hideKeyboardButtonView(), alignment: .bottomTrailing)
+                    .frame(height: ((proxy.size.height + self.safeAreaPadding(for: proxy)) - self.keyboardListener.keyboardHeight), alignment: .top)
                 Spacer()
             }
         }
@@ -49,6 +49,10 @@ public struct AdjustsForKeyboard: ViewModifier {
         } else {
             return AnyView(Spacer())
         }
+    }
+    
+    private func safeAreaPadding(for proxy: GeometryProxy) -> CGFloat {
+        return keyboardListener.keyboardHeight > 0 ? proxy.safeAreaInsets.bottom : 0.0
     }
 
 }
