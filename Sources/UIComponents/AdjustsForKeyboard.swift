@@ -25,6 +25,7 @@ public struct AdjustsForKeyboard: ViewModifier {
             VStack {
                 content
                     .overlay(self.hideKeyboardButtonView(), alignment: .bottomTrailing)
+                    .edgesIgnoringSafeArea(.bottom)
                     .frame(height: (proxy.size.height - self.keyboardListener.keyboardHeight), alignment: .top)
                 Spacer()
             }
@@ -41,7 +42,7 @@ public struct AdjustsForKeyboard: ViewModifier {
             return AnyView(Button(action: { self.hideKeyboard() }) {
                 Image(systemName: "keyboard.chevron.compact.down")
                     .padding()
-                    .background(Color(UIColor.secondarySystemBackground))
+                    .background(Color(UIColor.tertiarySystemBackground))
                     .clipShape(Circle())
                     .accentColor(.orange)
             })
