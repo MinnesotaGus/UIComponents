@@ -36,15 +36,15 @@ public struct AdjustsForKeyboard: ViewModifier {
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
-
+    
     private func hideKeyboardButtonView() -> some View {
         VStack {
             if keyboardListener.keyboardHeight > 0 && showsHideKeyboardButton {
                 Button(action: { self.hideKeyboard() }) {
                     Image(systemName: "keyboard.chevron.compact.down")
                         .padding()
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .clipShape(Circle())
+                        .background(Circle()
+                            .fill(Color(UIColor.secondarySystemBackground)))
                         .accentColor(.orange)
                         .shadow(radius: 1)
                 }.transition(.opacity)
