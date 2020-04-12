@@ -12,6 +12,11 @@ public struct DocumentPicker: UIViewControllerRepresentable {
     public let fileURL: URL
     public let delegate: UIDocumentPickerDelegate?
     
+    public init(fileURL: URL, delegate: UIDocumentPickerDelegate) {
+        self.fileURL = fileURL
+        self.delegate = delegate
+    }
+    
     public func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
         let pickerViewController = UIDocumentPickerViewController(url: fileURL, in: .moveToService)
         pickerViewController.delegate = delegate
