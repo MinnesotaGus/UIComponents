@@ -7,18 +7,18 @@
 
 import SwiftUI
 
-struct DocumentPicker: UIViewControllerRepresentable {
+public struct DocumentPicker: UIViewControllerRepresentable {
     
-    let fileURL: URL
-    let delegate: UIDocumentPickerDelegate?
+    public let fileURL: URL
+    public let delegate: UIDocumentPickerDelegate?
     
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+    public func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
         let pickerViewController = UIDocumentPickerViewController(url: fileURL, in: .moveToService)
         pickerViewController.delegate = delegate
         return pickerViewController
     }
     
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {
+    public func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {
         // nothing to do here
     }
     
