@@ -26,6 +26,19 @@ public struct BackwardsCompatibleHoverEffectModifier: ViewModifier {
     
 }
 
+extension View {
+    
+    /// Adds a hover effect modifier to the view
+    /// - Parameter effect: The effect to add
+    /// - Returns: The modified view
+    public func backwardsCompatibleHoverEffect(effect: BackwardsCompatibleHoverEffectModifier.Effect = .automatic) -> some View {
+        return ModifiedContent(content: self,
+                               modifier: BackwardsCompatibleHoverEffectModifier(effect: effect))
+    }
+    
+}
+
+
 //MARK: - Models
 
 extension BackwardsCompatibleHoverEffectModifier {

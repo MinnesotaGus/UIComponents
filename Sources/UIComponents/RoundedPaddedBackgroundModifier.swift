@@ -8,6 +8,7 @@
 
 import SwiftUI
 
+/// Modifier that adds a rounded padded background to the view
 public struct RoundedPaddedBackgroundModifier: ViewModifier {
     
     let paddingInsets: EdgeInsets?
@@ -34,5 +35,24 @@ public struct RoundedPaddedBackgroundModifier: ViewModifier {
         }
     }
     
+}
+
+extension View {
+    
+    /// Adds a rounded padded background to the view
+    /// - Parameters:
+    ///   - paddingInsets: Insets of the desired padding
+    ///   - backgroundColor: The background color to apply
+    ///   - cornerRadius: The corner radius of the background
+    /// - Returns: The modified view
+    public func roundedPaddedBackground(paddingInsets: EdgeInsets? = nil,
+                                        backgroundColor: Color = Color(UIColor.secondarySystemBackground),
+                                        cornerRadius: CGFloat = 8.0) -> some View {
+        return ModifiedContent(content: self,
+                               modifier: RoundedPaddedBackgroundModifier(paddingInsets: paddingInsets,
+                                                                         backgroundColor: backgroundColor,
+                                                                         cornerRadius: cornerRadius))
+    }
+
 }
 
