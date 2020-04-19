@@ -8,14 +8,14 @@
 import SwiftUI
 
 /// View that wraps this given content in a cell style view
-struct CellView<Content: View>: View {
+public struct CellView<Content: View>: View {
     
-    let showsChevron: Bool
-    let isSelected: Bool
-    let backgroundColor: Color
-    let content: Content
+    public let showsChevron: Bool
+    public let isSelected: Bool
+    public let backgroundColor: Color
+    public let content: Content
     
-    var body: some View {
+    public var body: some View {
         HStack {
             content
             Spacer()
@@ -28,7 +28,7 @@ struct CellView<Content: View>: View {
         .backwardsCompatibleHoverEffect()
     }
     
-    init(showsChevron: Bool,
+    public init(showsChevron: Bool,
          isSelected: Bool,
          backgroundColor: Color = Color(UIColor.secondarySystemBackground),
          @ViewBuilder contentBuilder: () -> Content) {
