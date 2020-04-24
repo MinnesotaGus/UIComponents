@@ -20,6 +20,8 @@ public struct LocalizedChevron: View {
         }
     }
     
+    public init() { }
+    
 }
 
 //MARK: - Previews
