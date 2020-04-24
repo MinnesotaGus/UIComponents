@@ -8,34 +8,32 @@
 import SwiftUI
 
 /// View that wraps this given content in a cell style view
-public struct CellView<Content: View>: View {
+public struct CellView<Content: View, Accesory: View>: View {
     
-    public let showsChevron: Bool
     public let isSelected: Bool
     public let backgroundColor: Color
     public let content: Content
+    public let accessory: Accesory
     
     public var body: some View {
         HStack {
             content
             Spacer()
-            if showsChevron {
-                Image(systemName: "chevron.right").layoutPriority(1.0)
-            }
+            accessory.layoutPriority(1.0)
         }
         .roundedPaddedBackground(backgroundColor: backgroundColor)
         .selectedOutline(isSelected: isSelected)
         .backwardsCompatibleHoverEffect()
     }
     
-    public init(showsChevron: Bool,
-         isSelected: Bool,
-         backgroundColor: Color = Color(UIColor.secondarySystemBackground),
-         @ViewBuilder contentBuilder: () -> Content) {
-        self.showsChevron = showsChevron
+    public init(isSelected: Bool,
+                backgroundColor: Color = Color(UIColor.secondarySystemBackground),
+                @ViewBuilder contentBuilder: () -> Content,
+                @ViewBuilder accessoryBuilder: () -> Accesory) {
         self.isSelected = isSelected
         self.backgroundColor = backgroundColor
         self.content = contentBuilder()
+        self.accessory = accessoryBuilder()
     }
     
 }
@@ -46,50 +44,63 @@ struct CellView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             Group {
-                CellView(showsChevron: true, isSelected: false) {
+                CellView(isSelected: false, contentBuilder: {
                     VStack(alignment: .leading) {
                         Text("Title Label")
                             .font(.headline)
                         Text("Description Label")
                             .font(.subheadline)
                     }
-                }
+                }, accessoryBuilder: {
+                    LocalizedChevron()
+                })
                 .padding()
+                .background(Color(.systemBackground))
                 .previewLayout(.sizeThatFits)
                 
-                CellView(showsChevron: false, isSelected: true) {
+                
+                CellView(isSelected: true, contentBuilder: {
                     VStack(alignment: .leading) {
                         Text("Title Label")
                             .font(.headline)
                         Text("Description Label")
                             .font(.subheadline)
                     }
-                }
+                }, accessoryBuilder: {
+                    LocalizedChevron()
+                })
                 .padding()
+                .background(Color(.systemBackground))
                 .previewLayout(.sizeThatFits)
             }
             
             Group {
-                CellView(showsChevron: true, isSelected: false) {
+                CellView(isSelected: false, contentBuilder: {
                     VStack(alignment: .leading) {
                         Text("Title Label")
                             .font(.headline)
                         Text("Description Label")
                             .font(.subheadline)
                     }
-                }
+                }, accessoryBuilder: {
+                    LocalizedChevron()
+                })
                 .padding()
+                .background(Color(.systemBackground))
                 .previewLayout(.sizeThatFits)
                 
-                CellView(showsChevron: false, isSelected: true) {
+                CellView(isSelected: true, contentBuilder: {
                     VStack(alignment: .leading) {
                         Text("Title Label")
                             .font(.headline)
                         Text("Description Label")
                             .font(.subheadline)
                     }
-                }
+                }, accessoryBuilder: {
+                    LocalizedChevron()
+                })
                 .padding()
+                .background(Color(.systemBackground))
                 .previewLayout(.sizeThatFits)
             }.environment(\.colorScheme, .dark)
         }
