@@ -40,7 +40,7 @@ public struct MultilineTextView: UIViewRepresentable {
 
 extension MultilineTextView {
     
-    public class Coordinator : NSObject, UITextViewDelegate {
+    public class Coordinator: NSObject, UITextViewDelegate {
 
         let text: Binding<String>
 
