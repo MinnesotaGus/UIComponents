@@ -149,7 +149,7 @@ final class NumberPickerCollectionView: UIView {
     }
     
     func set(value: Double, animated: Bool) {
-        guard !isScrolling else {
+        guard !isScrolling, value != self.value(for: collectionView.contentOffset) else {
             return
         }
         scrollingToValue = value
