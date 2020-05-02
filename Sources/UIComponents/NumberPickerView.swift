@@ -29,7 +29,7 @@ public struct NumberPickerView: View {
                 }
             }.padding([.leading, .trailing], 2)
             NumberPickerCollectionViewWrapper(value: value, minValue: minValue, maxValue: maxValue)
-                .frame(minWidth: 240, idealWidth: nil, maxWidth: .infinity, minHeight: 96, idealHeight: 96, maxHeight: 96, alignment: .leading)
+                .frame(minWidth: 240, idealWidth: nil, maxWidth: .infinity, minHeight: 80, idealHeight: 80, maxHeight: 80, alignment: .center)
         }
         .roundedPaddedBackground(paddingInsets: EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
     }
@@ -103,7 +103,7 @@ final class NumberPickerCollectionView: UIView {
     private var valueUpdatedClosure: ((Double) -> Void)?
     private var isScrolling: Bool = false
     
-    private let cellWidth: CGFloat = 96
+    private let cellWidth: CGFloat = 80
     private var paddingCellWidth: CGFloat {
         return collectionView.bounds.width / 2
     }
@@ -111,7 +111,7 @@ final class NumberPickerCollectionView: UIView {
     init(value: Binding<Double>, minValue: Double, maxValue: Double) {
         self.minValue = minValue
         self.maxValue = maxValue
-        super.init(frame: CGRect(x: 0, y: 0, width: 320, height: 96))
+        super.init(frame: CGRect(x: 0, y: 0, width: 320, height: 80))
         configureView()
         DispatchQueue.main.async {
             //Need to wait a loop to set the initial values
@@ -142,16 +142,16 @@ final class NumberPickerCollectionView: UIView {
         (collectionView as UIScrollView).delegate = self
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(collectionView)
-        collectionView.heightAnchor.constraint(equalToConstant: 96).isActive = true
+        collectionView.heightAnchor.constraint(equalToConstant: 80).isActive = true
         collectionView.topAnchor.constraint(equalTo: topAnchor).isActive = true
         collectionView.leadingAnchor.constraint(equalTo: leadingAnchor).isActive = true
         collectionView.trailingAnchor.constraint(equalTo: trailingAnchor).isActive = true
         collectionView.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor).isActive = true
         
-        centerTickView.backgroundColor = tintColor.withAlphaComponent(0.75)
+        centerTickView.backgroundColor = tintColor
         centerTickView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(centerTickView)
-        centerTickView.widthAnchor.constraint(equalToConstant: 1).isActive = true
+        centerTickView.widthAnchor.constraint(equalToConstant: 2).isActive = true
         centerTickView.centerXAnchor.constraint(equalTo: collectionView.centerXAnchor).isActive = true
         centerTickView.topAnchor.constraint(equalTo: topAnchor).isActive = true
         centerTickView.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
@@ -193,6 +193,12 @@ final class NumberPickerCollectionView: UIView {
         return min(max(minValue, raw), maxValue)
     }
     
+    private func nearestValue() -> Double {
+        let currentValue = currentValueFromCollectionView()
+        let timesTen = (currentValue * 10).rounded()
+        return timesTen / 10
+    }
+    
 }
 
 //MARK: - Cell Models
@@ -214,8 +220,21 @@ extension NumberPickerCollectionView: UIScrollViewDelegate {
         isScrolling = true
     }
     
+    public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            isScrolling = false
+            set(value: nearestValue(), animated: true)
+        }
+    }
+    
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         isScrolling = false
+        set(value: nearestValue(), animated: true)
+    }
+    
+    public func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        isScrolling = false
+        valueUpdatedClosure?(value(for: scrollView.contentOffset))
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -270,9 +289,9 @@ extension NumberPickerCollectionView: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         switch cells[indexPath.row] {
         case .number:
-            return CGSize(width: cellWidth, height: 96)
+            return CGSize(width: cellWidth, height: 80)
         case .padding:
-            return CGSize(width: paddingCellWidth, height: 96)
+            return CGSize(width: paddingCellWidth, height: 80)
         }
     }
     
@@ -360,7 +379,6 @@ final class NumberPickerCollectionViewCell: UICollectionViewCell {
         tickViews = []
         
         let tickCenterLineGap = bounds.width / CGFloat(numberOfTicks)
-
         var previousTickView: UIView?
         for i in 1...(numberOfTicks) {
             let tickView = UIView()
