@@ -72,19 +72,27 @@ final class NumberPickerCollectionView: UIView {
     
     let collectionView: UICollectionView = UICollectionView(frame: .zero, collectionViewLayout: UICollectionViewFlowLayout())
     let flowLayout: UICollectionViewFlowLayout = UICollectionViewFlowLayout()
+    private let centerTickView: UIView = UIView()
     
     override var bounds: CGRect {
         didSet {
-            calculateNumberOfCells()
+            generateNumberOfCells()
+        }
+    }
+    
+    override var tintColor: UIColor! {
+        didSet {
+            centerTickView.backgroundColor = tintColor
+            collectionView.reloadData()
         }
     }
     
     let minValue: Double
     let maxValue: Double
     
-    private var numberOfCells: Int = 0 {
+    private var cells: [Cell] = [] {
         didSet {
-            guard numberOfCells != oldValue else {
+            guard cells != oldValue else {
                 return
             }
             
@@ -95,19 +103,23 @@ final class NumberPickerCollectionView: UIView {
     private var valueUpdatedClosure: ((Double) -> Void)?
     private var isScrolling: Bool = false
     
+    private let cellWidth: CGFloat = 96
+    private var paddingCellWidth: CGFloat {
+        return collectionView.bounds.width / 2
+    }
+    
     init(value: Binding<Double>, minValue: Double, maxValue: Double) {
         self.minValue = minValue
         self.maxValue = maxValue
         super.init(frame: CGRect(x: 0, y: 0, width: 320, height: 96))
         configureView()
         DispatchQueue.main.async {
-            //New to wait a loop to set the initial values
+            //Need to wait a loop to set the initial values
             self.set(value: value.wrappedValue, animated: false)
             //Set after we are at initial value
             //Don't want to post back until everything is set
             self.valueUpdatedClosure = { value.wrappedValue = $0 }
         }
-        
     }
     
     required init?(coder: NSCoder) {
@@ -117,17 +129,14 @@ final class NumberPickerCollectionView: UIView {
     private func configureView() {
         backgroundColor = .clear
         
-        flowLayout.estimatedItemSize = CGSize(width: 96, height: 96)
-        flowLayout.itemSize = CGSize(width: 96, height: 96)
         flowLayout.scrollDirection = .horizontal
-        flowLayout.minimumInteritemSpacing = 0
-        flowLayout.minimumLineSpacing = 0
         
         collectionView.showsHorizontalScrollIndicator = false
         collectionView.backgroundView = nil
         collectionView.backgroundColor = .clear
         collectionView.setCollectionViewLayout(flowLayout, animated: false)
         collectionView.register(NumberPickerCollectionViewCell.self, forCellWithReuseIdentifier: NumberPickerCollectionViewCell.identifier)
+        collectionView.register(NumberPickerEmptyPaddingCollectionCell.self, forCellWithReuseIdentifier: NumberPickerEmptyPaddingCollectionCell.identifier)
         collectionView.dataSource = self
         collectionView.delegate = self
         (collectionView as UIScrollView).delegate = self
@@ -139,7 +148,15 @@ final class NumberPickerCollectionView: UIView {
         collectionView.trailingAnchor.constraint(equalTo: trailingAnchor).isActive = true
         collectionView.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor).isActive = true
         
-        calculateNumberOfCells()
+        centerTickView.backgroundColor = tintColor.withAlphaComponent(0.75)
+        centerTickView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(centerTickView)
+        centerTickView.widthAnchor.constraint(equalToConstant: 1).isActive = true
+        centerTickView.centerXAnchor.constraint(equalTo: collectionView.centerXAnchor).isActive = true
+        centerTickView.topAnchor.constraint(equalTo: topAnchor).isActive = true
+        centerTickView.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
+        
+        generateNumberOfCells()
     }
     
     func set(value: Double, animated: Bool) {
@@ -150,15 +167,20 @@ final class NumberPickerCollectionView: UIView {
         collectionView.setContentOffset(calculateContentOffset(for: value), animated: animated)
     }
     
-    private func calculateNumberOfCells() {
-        let newNumberOfCells = Int(ceil(maxValue - minValue))
-        let paddingCells = Int(ceil(bounds.width / flowLayout.itemSize.width))
-        numberOfCells = newNumberOfCells + paddingCells
+    private func generateNumberOfCells() {
+        let start = Int(minValue)
+        let end = Int(maxValue - 1)
+        
+        var newCells: [Cell] = [.padding]
+        for i in start...end {
+            newCells.append(.number(Double(i)))
+        }
+        newCells.append(.padding)
+        cells = newCells
     }
     
     private func calculateContentOffset(for value: Double) -> CGPoint {
-        let itemWidth = flowLayout.itemSize.width
-        let xOffset = itemWidth * CGFloat(value - minValue)
+        let xOffset = (cellWidth * CGFloat(value - minValue))
         return CGPoint(x: xOffset, y: 0)
     }
     
@@ -167,9 +189,19 @@ final class NumberPickerCollectionView: UIView {
     }
     
     private func value(for contentOffset: CGPoint) -> Double {
-        let itemWidth = flowLayout.itemSize.width
-        let raw = (Double(contentOffset.x) / Double(itemWidth)) + minValue
+        let raw = ((Double(contentOffset.x) / Double(cellWidth)) + minValue)
         return min(max(minValue, raw), maxValue)
+    }
+    
+}
+
+//MARK: - Cell Models
+
+extension NumberPickerCollectionView {
+    
+    enum Cell: Equatable {
+        case number(Double)
+        case padding
     }
     
 }
@@ -207,24 +239,52 @@ extension NumberPickerCollectionView: UICollectionViewDataSource {
             return 0
         }
         
-        return numberOfCells
+        return cells.count
     }
     
     public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NumberPickerCollectionViewCell.identifier, for: indexPath) as? NumberPickerCollectionViewCell else {
-            preconditionFailure("CollectionView not configured properly")
+        switch cells[indexPath.row] {
+        case let .number(number):
+            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NumberPickerCollectionViewCell.identifier, for: indexPath) as? NumberPickerCollectionViewCell else {
+                preconditionFailure("CollectionView not configured properly")
+            }
+            
+            cell.tintColor = tintColor
+            cell.number = number
+            return cell
+        case .padding:
+            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NumberPickerEmptyPaddingCollectionCell.identifier, for: indexPath) as? NumberPickerEmptyPaddingCollectionCell else {
+                preconditionFailure("CollectionView not configured properly")
+            }
+            
+            return cell
         }
-        
-        cell.tintColor = tintColor
-        cell.number = Double(indexPath.row) + minValue
-        return cell
     }
     
 }
 
-//MARK: - UICollectionViewDelegate
+//MARK: - UICollectionViewDelegateFlowLayout
 
-extension NumberPickerCollectionView: UICollectionViewDelegate { }
+extension NumberPickerCollectionView: UICollectionViewDelegateFlowLayout {
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        switch cells[indexPath.row] {
+        case .number:
+            return CGSize(width: cellWidth, height: 96)
+        case .padding:
+            return CGSize(width: paddingCellWidth, height: 96)
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
+        return 0
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
+        return 0
+    }
+    
+}
 
 //MARK: - NumberPickerCollectionViewCell
 
@@ -249,7 +309,7 @@ final class NumberPickerCollectionViewCell: UICollectionViewCell {
                 return
             }
             
-            renderTickMarks()
+            layoutTickMarks()
         }
     }
     
@@ -259,15 +319,77 @@ final class NumberPickerCollectionViewCell: UICollectionViewCell {
                 return
             }
             
-            renderTickMarks()
+            layoutTickMarks()
         }
     }
     
-    private let stackView = UIStackView()
     private let numberLabel = UILabel()
     
     private let numberOfTicks: Int = 10
     private let tallTickToShortTickRatio: CGFloat = 2 / 3
+    
+    private var tickViews: [UIView] = []
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        configureView()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func configureView() {
+        clipsToBounds = false
+        
+        contentView.backgroundColor = .clear
+        contentView.clipsToBounds = false
+        
+        numberLabel.font = UIFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+        numberLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(numberLabel)
+        numberLabel.topAnchor.constraint(equalTo: topAnchor).isActive = true
+        numberLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2).isActive = true
+        
+        layoutTickMarks()
+    }
+    
+    private func layoutTickMarks() {
+        /// Dump all exisiting ticks and start over
+        tickViews.forEach { $0.removeFromSuperview() }
+        tickViews = []
+        
+        let tickCenterLineGap = bounds.width / CGFloat(numberOfTicks)
+
+        var previousTickView: UIView?
+        for i in 1...(numberOfTicks) {
+            let tickView = UIView()
+            tickView.backgroundColor = tintColor
+            tickView.translatesAutoresizingMaskIntoConstraints = false
+            contentView.addSubview(tickView)
+            tickView.widthAnchor.constraint(equalToConstant: 1).isActive = true
+            // If the tick is the first one then full height, otherwise short height
+            let height: CGFloat = i == 1 ? bounds.height : (bounds.height * tallTickToShortTickRatio)
+            tickView.heightAnchor.constraint(equalToConstant: height).isActive = true
+            tickView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor).isActive = true
+            
+            if let previousTickView = previousTickView {
+                //If there's a previous tick, pin center to that one's center plus the gap
+                tickView.centerXAnchor.constraint(equalTo: previousTickView.centerXAnchor, constant: tickCenterLineGap).isActive = true
+            } else {
+                //If first view, then pin center to leading edge
+                tickView.centerXAnchor.constraint(equalTo: leadingAnchor).isActive = true
+            }
+            
+            previousTickView = tickView
+        }
+    }
+    
+}
+
+final class NumberPickerEmptyPaddingCollectionCell: UICollectionViewCell {
+    
+    static let identifier: String = "NumberPickerEmptyPaddingCollectionCellId"
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -280,44 +402,6 @@ final class NumberPickerCollectionViewCell: UICollectionViewCell {
     
     private func configureView() {
         contentView.backgroundColor = .clear
-        
-        stackView.axis = .horizontal
-        stackView.alignment = .bottom
-        stackView.distribution = .equalCentering
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(stackView)
-        stackView.topAnchor.constraint(equalTo: contentView.topAnchor).isActive = true
-        stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor).isActive = true
-        stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor).isActive = true
-        stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor).isActive = true
-        
-        numberLabel.font = UIFont.monospacedSystemFont(ofSize: 10, weight: .regular)
-        numberLabel.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(numberLabel)
-        numberLabel.topAnchor.constraint(equalTo: topAnchor).isActive = true
-        numberLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2).isActive = true
-        
-        renderTickMarks()
-    }
-    
-    private func renderTickMarks() {
-        /// Dump all exisiting ticks and start over
-        stackView.arrangedSubviews.forEach { stackView.removeArrangedSubview($0) }
-        
-        /// Loop through the number of ticks (n) plus one
-        /// We need n visible ticks, with n visible gaps between them.
-        /// We add an addition invisible tick at the end to get the last gap
-        for i in 1...(numberOfTicks + 1) {
-            let tickView = UIView()
-            // If the tick is the is the last tick, then make it clear, otherwise make it the tint color
-            tickView.backgroundColor = i != (numberOfTicks + 1) ? tintColor : UIColor.clear
-            tickView.translatesAutoresizingMaskIntoConstraints = false
-            tickView.widthAnchor.constraint(equalToConstant: 1).isActive = true
-            // If the tick is the first one then full height, otherwise short height
-            let height: CGFloat = i == 1 ? bounds.height : (bounds.height * tallTickToShortTickRatio)
-            tickView.heightAnchor.constraint(equalToConstant: height).isActive = true
-            stackView.addArrangedSubview(tickView)
-        }
     }
     
 }
