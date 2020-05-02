@@ -14,33 +14,36 @@ public struct NumberPickerView: View {
     let value: Binding<Double>
     let minValue: Double
     let maxValue: Double
+    let closeButtonAction: () -> Void
     
     public var body: some View {
         VStack {
             HStack {
                 Spacer().frame(maxWidth: .infinity)
                 Button(action: {
-                    //
+                    self.closeButtonAction()
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.headline)
                         .accentColor(.orange)
                 }
-            }
+            }.padding([.leading, .trailing], 2)
             NumberPickerCollectionViewWrapper(value: value, minValue: minValue, maxValue: maxValue)
-                .frame(minWidth: 240, idealWidth: nil, maxWidth: .infinity, minHeight: 64, idealHeight: 64, maxHeight: 64, alignment: .leading)
+                .frame(minWidth: 240, idealWidth: nil, maxWidth: .infinity, minHeight: 96, idealHeight: 96, maxHeight: 96, alignment: .leading)
         }
         .roundedPaddedBackground(paddingInsets: EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
     }
     
-    public init(value: Binding<Double>, minValue: Double, maxValue: Double) {
+    public init(value: Binding<Double>, minValue: Double, maxValue: Double, closeButtonAction: @escaping () -> Void) {
         self.value = value
         self.minValue = minValue
         self.maxValue = maxValue
+        self.closeButtonAction = closeButtonAction
     }
     
 }
 
+/// SwiftUI wrapper for NumberPickerCollectionView
 struct NumberPickerCollectionViewWrapper: UIViewRepresentable {
     
     let value: Binding<Double>
@@ -54,8 +57,8 @@ struct NumberPickerCollectionViewWrapper: UIViewRepresentable {
     }
     
     func makeUIView(context: Context) -> NumberPickerCollectionView {
-        let numberPickerCollectionView = NumberPickerCollectionView(frame: CGRect(x: 0, y: 0, width: 320, height: 64))
-        numberPickerCollectionView.valueUpdatedClosure = { self.value.wrappedValue = $0 }
+        let numberPickerCollectionView = NumberPickerCollectionView(value: value, minValue: minValue, maxValue: maxValue)
+        numberPickerCollectionView.tintColor = UIColor.orange
         return numberPickerCollectionView
     }
     
@@ -70,33 +73,14 @@ final class NumberPickerCollectionView: UIView {
     let collectionView: UICollectionView = UICollectionView(frame: .zero, collectionViewLayout: UICollectionViewFlowLayout())
     let flowLayout: UICollectionViewFlowLayout = UICollectionViewFlowLayout()
     
-    var valueUpdatedClosure: ((Double) -> Void)?
-    
     override var bounds: CGRect {
         didSet {
             calculateNumberOfCells()
         }
     }
     
-    var minValue: Double = 0.0 {
-        didSet {
-            guard minValue != oldValue else {
-                return
-            }
-            
-            calculateNumberOfCells()
-        }
-    }
-    
-    var maxValue: Double = 100.0 {
-        didSet {
-            guard maxValue != oldValue else {
-                return
-            }
-            
-            calculateNumberOfCells()
-        }
-    }
+    let minValue: Double
+    let maxValue: Double
     
     private var numberOfCells: Int = 0 {
         didSet {
@@ -108,12 +92,22 @@ final class NumberPickerCollectionView: UIView {
         }
     }
     
+    private var valueUpdatedClosure: ((Double) -> Void)?
     private var isScrolling: Bool = false
-    private var scrollingToValue: Double?
     
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    init(value: Binding<Double>, minValue: Double, maxValue: Double) {
+        self.minValue = minValue
+        self.maxValue = maxValue
+        super.init(frame: CGRect(x: 0, y: 0, width: 320, height: 96))
         configureView()
+        DispatchQueue.main.async {
+            //New to wait a loop to set the initial values
+            self.set(value: value.wrappedValue, animated: false)
+            //Set after we are at initial value
+            //Don't want to post back until everything is set
+            self.valueUpdatedClosure = { value.wrappedValue = $0 }
+        }
+        
     }
     
     required init?(coder: NSCoder) {
@@ -123,8 +117,8 @@ final class NumberPickerCollectionView: UIView {
     private func configureView() {
         backgroundColor = .clear
         
-        flowLayout.estimatedItemSize = CGSize(width: 96, height: 64)
-        flowLayout.itemSize = CGSize(width: 96, height: 64)
+        flowLayout.estimatedItemSize = CGSize(width: 96, height: 96)
+        flowLayout.itemSize = CGSize(width: 96, height: 96)
         flowLayout.scrollDirection = .horizontal
         flowLayout.minimumInteritemSpacing = 0
         flowLayout.minimumLineSpacing = 0
@@ -139,7 +133,7 @@ final class NumberPickerCollectionView: UIView {
         (collectionView as UIScrollView).delegate = self
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(collectionView)
-        collectionView.heightAnchor.constraint(equalToConstant: 64).isActive = true
+        collectionView.heightAnchor.constraint(equalToConstant: 96).isActive = true
         collectionView.topAnchor.constraint(equalTo: topAnchor).isActive = true
         collectionView.leadingAnchor.constraint(equalTo: leadingAnchor).isActive = true
         collectionView.trailingAnchor.constraint(equalTo: trailingAnchor).isActive = true
@@ -149,11 +143,11 @@ final class NumberPickerCollectionView: UIView {
     }
     
     func set(value: Double, animated: Bool) {
-        guard !isScrolling, value != self.value(for: collectionView.contentOffset) else {
+        guard !isScrolling, value != currentValueFromCollectionView() else {
             return
         }
-        scrollingToValue = value
-        collectionView.setContentOffset(contentOffset(for: value), animated: animated)
+        
+        collectionView.setContentOffset(calculateContentOffset(for: value), animated: animated)
     }
     
     private func calculateNumberOfCells() {
@@ -162,17 +156,20 @@ final class NumberPickerCollectionView: UIView {
         numberOfCells = newNumberOfCells + paddingCells
     }
     
-    private func contentOffset(for value: Double) -> CGPoint {
+    private func calculateContentOffset(for value: Double) -> CGPoint {
         let itemWidth = flowLayout.itemSize.width
         let xOffset = itemWidth * CGFloat(value - minValue)
-        
         return CGPoint(x: xOffset, y: 0)
+    }
+    
+    private func currentValueFromCollectionView() -> Double {
+        return value(for: collectionView.contentOffset)
     }
     
     private func value(for contentOffset: CGPoint) -> Double {
         let itemWidth = flowLayout.itemSize.width
-        let raw = (Double(contentOffset.x) / Double(itemWidth)) - minValue
-        return min(max(0.0, raw), 100.0)
+        let raw = (Double(contentOffset.x) / Double(itemWidth)) + minValue
+        return min(max(minValue, raw), maxValue)
     }
     
 }
@@ -190,15 +187,11 @@ extension NumberPickerCollectionView: UIScrollViewDelegate {
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        if let scrollingToValue = scrollingToValue {
-            if value(for: scrollView.contentOffset) == scrollingToValue {
-                self.scrollingToValue = nil
-                valueUpdatedClosure?(value(for: scrollView.contentOffset))
-            }
-        } else {
-            valueUpdatedClosure?(value(for: scrollView.contentOffset))
+        guard isScrolling else {
+            return
         }
         
+        valueUpdatedClosure?(value(for: scrollView.contentOffset))
     }
     
 }
@@ -222,8 +215,8 @@ extension NumberPickerCollectionView: UICollectionViewDataSource {
             preconditionFailure("CollectionView not configured properly")
         }
         
-        cell.numberOfTicks = 10
-        cell.number = Double(indexPath.row)
+        cell.tintColor = tintColor
+        cell.number = Double(indexPath.row) + minValue
         return cell
     }
     
@@ -250,28 +243,31 @@ final class NumberPickerCollectionViewCell: UICollectionViewCell {
         }
     }
     
-    var numberOfTicks: Int = 10 {
-        didSet {
-            guard numberOfTicks != oldValue else {
-                return
-            }
-            
-            updateTickMarks()
-        }
-    }
-    
     override var bounds: CGRect {
         didSet {
             guard bounds.height != oldValue.height else {
                 return
             }
             
-            updateTickMarks()
+            renderTickMarks()
+        }
+    }
+    
+    override var tintColor: UIColor! {
+        didSet {
+            guard tintColor != oldValue else {
+                return
+            }
+            
+            renderTickMarks()
         }
     }
     
     private let stackView = UIStackView()
     private let numberLabel = UILabel()
+    
+    private let numberOfTicks: Int = 10
+    private let tallTickToShortTickRatio: CGFloat = 2 / 3
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -301,18 +297,24 @@ final class NumberPickerCollectionViewCell: UICollectionViewCell {
         numberLabel.topAnchor.constraint(equalTo: topAnchor).isActive = true
         numberLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2).isActive = true
         
-        updateTickMarks()
+        renderTickMarks()
     }
     
-    private func updateTickMarks() {
+    private func renderTickMarks() {
+        /// Dump all exisiting ticks and start over
         stackView.arrangedSubviews.forEach { stackView.removeArrangedSubview($0) }
         
+        /// Loop through the number of ticks (n) plus one
+        /// We need n visible ticks, with n visible gaps between them.
+        /// We add an addition invisible tick at the end to get the last gap
         for i in 1...(numberOfTicks + 1) {
             let tickView = UIView()
-            tickView.backgroundColor = i != (numberOfTicks + 1) ? UIColor.orange : UIColor.clear
+            // If the tick is the is the last tick, then make it clear, otherwise make it the tint color
+            tickView.backgroundColor = i != (numberOfTicks + 1) ? tintColor : UIColor.clear
             tickView.translatesAutoresizingMaskIntoConstraints = false
             tickView.widthAnchor.constraint(equalToConstant: 1).isActive = true
-            let height: CGFloat = i == 1 ? bounds.height : (bounds.height * 0.666667)
+            // If the tick is the first one then full height, otherwise short height
+            let height: CGFloat = i == 1 ? bounds.height : (bounds.height * tallTickToShortTickRatio)
             tickView.heightAnchor.constraint(equalToConstant: height).isActive = true
             stackView.addArrangedSubview(tickView)
         }
@@ -320,12 +322,23 @@ final class NumberPickerCollectionViewCell: UICollectionViewCell {
     
 }
 
+//MARK: - Previews
+
 struct NumberPickerView_Previews: PreviewProvider {
     
     @State static private var value: Double = 0.0
     
     static var previews: some View {
-        NumberPickerView(value: $value, minValue: 0.0, maxValue: 256.0)
+        Group {
+            Group {
+                NumberPickerView(value: $value, minValue: 0.0, maxValue: 256.0, closeButtonAction: {})
+                    .frame(width: 320)
+            }
+            Group {
+                NumberPickerView(value: $value, minValue: 0.0, maxValue: 256.0, closeButtonAction: {})
+                    .frame(width: 320)
+            }.environment(\.colorScheme, .dark)
+        }
     }
     
 }

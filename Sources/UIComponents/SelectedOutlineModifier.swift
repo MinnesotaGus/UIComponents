@@ -26,10 +26,25 @@ public struct SelectedOutlineModifier: ViewModifier {
         if isSelected {
             return AnyView(content.overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(selectedColor, lineWidth: 1)))
+                    .stroke(selectedColor, lineWidth: 1))).id(changeId())
         } else {
-            return AnyView(content)
+            return AnyView(content).id(changeId())
         }
+    }
+    
+    /// Returns a change id that represents the current state of the view
+    /// - Returns: `ChangeId`
+    private func changeId() -> ChangeId {
+        return ChangeId(isSelected: isSelected,
+                        selectedColor: selectedColor,
+                        cornerRadius: cornerRadius)
+    }
+    
+    /// Hashable struct that represents the current state of the view
+    struct ChangeId: Hashable {
+        let isSelected: Bool
+        let selectedColor: Color
+        let cornerRadius: CGFloat
     }
     
 }
