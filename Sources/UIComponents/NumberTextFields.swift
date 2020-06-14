@@ -137,3 +137,46 @@ fileprivate class DoubleTextModel: ObservableObject {
     
 }
 
+
+public struct IntegerTextField: View {
+    
+    @ObservedObject private var viewModel: IntegerTextModel
+    private let placeholder: String
+    
+    public var body: some View {
+        TextField(placeholder, text: $viewModel.text)
+            .keyboardType(.numberPad)
+    }
+    
+    public init(placeholder: String, value: Binding<Int>) {
+        self.placeholder = placeholder
+        self.viewModel = IntegerTextModel(value: value)
+    }
+    
+}
+
+fileprivate class IntegerTextModel: ObservableObject {
+    
+    var valueBinding: Binding<Int>
+    
+    @Published var text: String {
+        didSet{
+            if self.text != oldValue {
+                if let value = Int(text) {
+                    if value != self.valueBinding.wrappedValue {
+                        self.valueBinding.wrappedValue = value
+                    }
+                } else {
+                    self.text = oldValue
+                }
+            }
+        }
+    }
+    
+    init(value: Binding<Int>) {
+        valueBinding = value
+        text = "\(value.wrappedValue)"
+    }
+    
+}
+
