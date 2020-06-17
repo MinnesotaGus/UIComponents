@@ -16,7 +16,7 @@ public struct ProgressRing: View {
     private let lineWidth: CGFloat
     
     public init(value: Double,
-                backgroundColor: Color = Color(UIColor.secondarySystemBackground),
+                backgroundColor: Color? = Color(UIColor.secondarySystemBackground),
                 foregroundColor: Color = Color.black,
                 lineWidth: CGFloat = 10) {
         self.value = value
