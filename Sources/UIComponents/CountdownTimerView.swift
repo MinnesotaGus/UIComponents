@@ -20,15 +20,14 @@ public struct CountdownTimerView: View {
                          backgroundColor: ringBackgroundColor,
                          foregroundColor: ringColor,
                          lineWidth: 10)
-                .accessibility(hidden: true)
             
             Text(timeString(time: currentTime))
                 .font(Font.largeTitle.monospacedDigit())
                 .padding()
-                .accessibility(hidden: true)
         }
-        .frame(minWidth: 128, idealWidth: 128)
         .accessibility(value: Text(timeString(time: currentTime)))
+        .frame(minWidth: 128, idealWidth: 128)
+        
     }
     
     public init(currentTime: TimeInterval, totalTime: TimeInterval, ringColor: Color, ringBackgroundColor: Color? = nil) {
