@@ -1,11 +1,52 @@
 //
-//  NumberEntryView.swift
+//  NumberField.swift
 //  
 //
 //  Created by Jordan Gustafson on 6/19/20.
 //
 
 import SwiftUI
+
+/// A field for displaying and editing a number
+public struct NumberField: View {
+    
+    let number: Binding<Double>
+    let descriptionText: String?
+    
+    @State private var isEditingNumber: Bool = false
+    
+    public var body: some View {
+        VStack(alignment: .leading) {
+            descriptionText.flatMap { text in
+                Text(text)
+                    .id("Header")
+                    .font(.caption)
+                    .animation(.easeInOut)
+                    .transition(.opacity)
+            }
+            Text("\(number.wrappedValue)")
+                .font(.body)
+                .multilineTextAlignment(.leading)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4))
+                .background(Color(UIColor.systemBackground))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(UIColor.secondaryLabel), lineWidth: 1))
+        }.onTapGesture {
+            self.isEditingNumber = true
+        }.sheet(isPresented: $isEditingNumber) {
+            NumberEntryView(number: self.number, descriptionText: self.descriptionText) {
+                self.isEditingNumber = false
+            }
+        }
+    }
+    
+    public init(number: Binding<Double>, descriptionText: String?) {
+        self.number = number
+        self.descriptionText = descriptionText
+    }
+    
+}
 
 /// A view that can be used to enter/edit a number
 public struct NumberEntryView: View {
@@ -49,6 +90,7 @@ public struct NumberEntryView: View {
                     .font(Font.largeTitle.monospacedDigit())
                     .multilineTextAlignment(.trailing)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.1)
             }
         }
         .roundedPaddedBackground()
