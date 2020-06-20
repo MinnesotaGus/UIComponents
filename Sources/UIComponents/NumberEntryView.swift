@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+/// A view that can be used to enter/edit a number
 public struct NumberEntryView: View {
     
     @ObservedObject private var viewModel: NumberEntryViewModel
@@ -30,8 +31,8 @@ public struct NumberEntryView: View {
         
     }
     
-    public init(number: Binding<Double>, description: String?, closeTappedAction: (() -> Void)?) {
-        self.viewModel = NumberEntryViewModel(number: number, description: description, closeTappedAction: closeTappedAction)
+    public init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
+        self.viewModel = NumberEntryViewModel(number: number, descriptionText: descriptionText, closeTappedAction: closeTappedAction)
     }
 
     
@@ -39,7 +40,7 @@ public struct NumberEntryView: View {
         HStack {
             Spacer()
             VStack(alignment: .trailing) {
-                viewModel.description.flatMap { text in
+                viewModel.descriptionText.flatMap { text in
                     Text(text)
                         .font(.headline)
                         .multilineTextAlignment(.trailing)
@@ -72,12 +73,15 @@ public struct NumberEntryView: View {
                     .renderingMode(.template)
                     .font(.largeTitle)
                     .accentColor(Color(UIColor.gray))
+                    .accessibility(label: Text("Close"))
             }
         }
     }
     
     //MARK: - UI Values
     
+    
+    /// Returns the spacing between the keys
     private func spacing() -> CGFloat {
         switch verticalSizeClass {
         case .compact:
@@ -91,6 +95,8 @@ public struct NumberEntryView: View {
         }
     }
     
+    /// Returns the width for `NumberEntryView` based on the available space
+    /// - Parameter proxy: The proxy for the available space
     private func containerWidth(for proxy: GeometryProxy) -> CGFloat {
         if (proxy.size.width + (spacing() * 2.0)) > 256 {
             return 256
@@ -101,16 +107,22 @@ public struct NumberEntryView: View {
     
 }
 
+/// View Model for the `NumberEntryView`
 fileprivate class NumberEntryViewModel: ObservableObject {
     
-    let description: String?
+    private static let numberFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        return formatter
+    }()
+    
+    let descriptionText: String?
     let closeTappedAction: (() -> Void)?
     
     @Published var displayNumber: String = ""
     
     private let number: Binding<Double>
     
-    private var editingPlace: EditingLocation
+    private var activeDigitType: DigitType
     
     private var splitNumber: SplitNumber {
         didSet {
@@ -118,162 +130,221 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         }
     }
     
-    private let numberFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        return formatter
-    }()
-    
-    init(number: Binding<Double>, description: String?, closeTappedAction: (() -> Void)?) {
+    init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
         self.number = number
-        self.description = description
+        self.descriptionText = descriptionText
         self.closeTappedAction = closeTappedAction
         let splitNumber = SplitNumber(number: number.wrappedValue)
         self.splitNumber = splitNumber
-        if !splitNumber.postDecimalDigits.isEmpty && splitNumber.postDecimalDigits[0] != 0 {
-            editingPlace = .postDecimal
+        if splitNumber.hasFractionalDigits {
+            activeDigitType = .fractional
         } else {
-            editingPlace = .preDecimal
+            activeDigitType = .integer
         }
         
-        numberFormatter.maximumFractionDigits = splitNumber.postDecimalDigits.count
-        displayNumber = numberFormatter.string(from: NSNumber(value: number.wrappedValue)) ?? "0.0"
+        setDisplayNumber(for: number.wrappedValue, activeDigitType: activeDigitType)
     }
     
+    /// Call this method when a `Key` button is tapped
+    /// - Parameter key: The `Key` that was tapped
     func tapped(key: NumberEntryKeyView.Key) {
         switch key {
         case .zero:
-            append(number: 0)
+            numberTapped(0)
         case .one:
-            append(number: 1)
+            numberTapped(1)
         case .two:
-            append(number: 2)
+            numberTapped(2)
         case .three:
-            append(number: 3)
+            numberTapped(3)
         case .four:
-            append(number: 4)
+            numberTapped(4)
         case .five:
-            append(number: 5)
+            numberTapped(5)
         case .six:
-            append(number: 6)
+            numberTapped(6)
         case .seven:
-            append(number: 7)
+            numberTapped(7)
         case .eight:
-            append(number: 8)
+            numberTapped(8)
         case .nine:
-            append(number: 9)
+            numberTapped(9)
         case .decimalPoint:
-            if splitNumber.preDecimalDigits.isEmpty {
-                splitNumber = splitNumber.with(updatedPreDecimalDigits: [])
+            if splitNumber.integerDigits.isEmpty {
+                splitNumber = splitNumber.with(updatedIntegerDigits: [])
             }
-            editingPlace = .postDecimal
+            activeDigitType = .fractional
             updateNumber()
         case .clear:
-            splitNumber = SplitNumber(preDecimalDigits: [], postDecimalDigits: [])
+            //They hit clear, so let's clear out both the interger and the fractional digits
+            splitNumber = SplitNumber(integerDigits: [], fractionalDigits: [])
         }
     }
     
+    /// Call this when the close button is tapped
     func closeTapped() {
         closeTappedAction?()
     }
     
-    private func append(number: Int) {
-        switch editingPlace {
-        case .preDecimal:
-            if splitNumber.preDecimalDigits.count == 1 && splitNumber.preDecimalDigits[0] == 0 {
-                splitNumber = splitNumber.with(updatedPreDecimalDigits: [])
+    /// Updates the split number with the newly added number
+    /// - Parameter number: The number to update the split number with
+    private func numberTapped(_ number: Int) {
+        switch activeDigitType {
+        case .integer:
+            if splitNumber.integerDigits.count == 1 && splitNumber.integerDigits[0] == 0 {
+                splitNumber = splitNumber.with(updatedIntegerDigits: [])
             }
-            splitNumber = splitNumber.addingNumberToPreDecimalDigits(number)
-        case .postDecimal:
-            if splitNumber.postDecimalDigits.count == 1 && splitNumber.postDecimalDigits[0] == 0 {
-                splitNumber = splitNumber.with(updatedPostDecimalDigits: [])
+            splitNumber = splitNumber.addingNumberToIntegerDigits(number)
+        case .fractional:
+            if splitNumber.fractionalDigits.count == 1 && splitNumber.fractionalDigits[0] == 0 {
+                splitNumber = splitNumber.with(updatedFractionalDigits: [])
             }
-            splitNumber = splitNumber.addingNumberToPostDecimalDigits(number)
+            splitNumber = splitNumber.addingNumberToFractionalDigits(number)
         }
     }
     
+    /// Call this when the state changes to calculate a new value for the number
     private func updateNumber() {
-        var mutableLeading: Double = 0.0
-        let numberOfLeadingNumbers = splitNumber.preDecimalDigits.count
-        if numberOfLeadingNumbers > 0 {
-            for i in 0...(numberOfLeadingNumbers - 1) {
-                let exponent = pow(10, Double(numberOfLeadingNumbers - i - 1))
-                mutableLeading += Double(splitNumber.preDecimalDigits[i]) * exponent
-            }
-        }
-        
-        var mutableTrailing: Double = 0.0
-        let numberOfTrailingNumbers = splitNumber.postDecimalDigits.count
-        if numberOfTrailingNumbers > 0 {
-            for i in 0...(numberOfTrailingNumbers - 1) {
-                mutableTrailing += Double(splitNumber.postDecimalDigits[i]) / pow(10, Double(i + 1))
-            }
-        }
-        
-        let newNumber = mutableLeading + mutableTrailing
-        numberFormatter.maximumFractionDigits = splitNumber.postDecimalDigits.count
+        let newNumber = splitNumber.number
         if number.wrappedValue != newNumber {
             number.wrappedValue = newNumber
         }
-        let formattedNumber = numberFormatter.string(from: NSNumber(value: newNumber)) ?? "0"
-        if !formattedNumber.contains(".") && editingPlace == .postDecimal {
+        
+        setDisplayNumber(for: newNumber, activeDigitType: activeDigitType)
+    }
+    
+    /// Sets the `displayNumber` with the given number and active digit type
+    /// - Parameters:
+    ///   - number: The number to set
+    ///   - activeDigitType: The type of digit that is currently active
+    private func setDisplayNumber(for number: Double, activeDigitType: DigitType) {
+        Self.numberFormatter.maximumFractionDigits = splitNumber.fractionalDigits.count
+        let formattedNumber = Self.numberFormatter.string(from: NSNumber(value: number)) ?? "0"
+        if !formattedNumber.contains(".") && activeDigitType == .fractional {
             displayNumber = formattedNumber + "."
         } else {
             displayNumber = formattedNumber
         }
     }
     
-    enum EditingLocation {
-        case preDecimal
-        case postDecimal
-    }
+}
+
+//MARK: - ViewModel Models
+
+extension NumberEntryViewModel {
     
+    /// Represents a number split into it's integer and fractional digits
     struct SplitNumber {
         
-        let preDecimalDigits: [Int]
-        let postDecimalDigits: [Int]
+        /// The digits before the decimal point
+        let integerDigits: [Int]
+        /// The digits after the decimal point
+        let fractionalDigits: [Int]
         
-        init(number: Double) {
-            let numberString = String(number)
-            let separated = numberString.split(separator: ".")
-            if let leadingRoundedString = separated.first, let leadingRounded = Int(String(leadingRoundedString)) {
-                preDecimalDigits = String(describing: leadingRounded).compactMap { Int(String($0)) }
-            } else {
-                preDecimalDigits = []
+        /// Returns the number made up of the integer and fractional digits
+        var number: Double {
+            /// Calculate the value of the integer digits
+            var integerDigitsValue: Double = 0.0
+            let integerDigitsCount = integerDigits.count
+            if integerDigitsCount > 0 {
+                // Loop through all the integer digits
+                for i in 0...(integerDigitsCount - 1) {
+                    // Calculate the power of ten for the digit based on it's position
+                    let powerOfTen = pow(10, Double(integerDigitsCount - i - 1))
+                    // Add the digit times its' power of ten to the running value
+                    integerDigitsValue += Double(integerDigits[i]) * powerOfTen
+                }
             }
             
+            /// Calculate the value of the fractional digits
+            var fractionalDigitsValue: Double = 0.0
+            let fractionalDigitsCount = fractionalDigits.count
+            if fractionalDigitsCount > 0 {
+                // Loop through all the fractional digits
+                for i in 0...(fractionalDigitsCount - 1) {
+                    // Loop through all the integer digits
+                    let powerOfTen = pow(10, Double(i + 1))
+                    // Add the digit divided by its' power of ten to the running value
+                    fractionalDigitsValue += Double(fractionalDigits[i]) / powerOfTen
+                }
+            }
+            
+            return integerDigitsValue + fractionalDigitsValue
+        }
+        
+        /// Returns with whether or not the number has any integer digits with a non-zero value
+        var hasIntegerDigits: Bool {
+            return !integerDigits.isEmpty && integerDigits.last != 0
+        }
+        
+        /// Returns with whether or not the number has any fractional digits with a non-zero value
+        var hasFractionalDigits: Bool {
+            return !fractionalDigits.isEmpty && fractionalDigits.first != 0
+        }
+        
+        /// Intializes a `SplitNumber` with the given number
+        /// - Parameter number: The number to generate the `SplitNumber` for
+        init(number: Double) {
+            /// Convert it to a `String `
+            let numberString = String(number)
+            /// Split it on the decimal point
+            let separated = numberString.split(separator: ".")
+            
+            /// Grab the integer digits, they should be first in the array
+            if let integerDigitsString = separated.first, let integerDigitsValue = Int(String(integerDigitsString)) {
+                integerDigits = String(describing: integerDigitsValue).compactMap { Int(String($0)) }
+            } else {
+                integerDigits = []
+            }
+            
+            /// Check to see fi there are fractional digits, if there are grab them
             if separated.count > 1, let trailingRounded = Int(String(separated[1])) {
                 let trailingPlaced = String(describing: trailingRounded).compactMap { Int(String($0)) }
-                postDecimalDigits = trailingPlaced
+                fractionalDigits = trailingPlaced
             } else {
-                postDecimalDigits = []
+                fractionalDigits = []
             }
         }
         
-        init(preDecimalDigits: [Int], postDecimalDigits: [Int]) {
-            self.preDecimalDigits = preDecimalDigits
-            self.postDecimalDigits = postDecimalDigits
+        /// Intializes a `SplitNumber` with the given integer and fractional digits
+        /// - Parameters:
+        ///   - integerDigits: The digits before the decimal point
+        ///   - fractionalDigits: The digits after the decimal point
+        init(integerDigits: [Int], fractionalDigits: [Int]) {
+            self.integerDigits = integerDigits
+            self.fractionalDigits = fractionalDigits
         }
         
-        func with(updatedPreDecimalDigits: [Int]) -> SplitNumber {
-            return SplitNumber(preDecimalDigits: updatedPreDecimalDigits, postDecimalDigits: postDecimalDigits)
+        /// Returns a new `SplitNumber` with updated integer digits
+        func with(updatedIntegerDigits: [Int]) -> SplitNumber {
+            return SplitNumber(integerDigits: updatedIntegerDigits, fractionalDigits: fractionalDigits)
         }
         
-        func with(updatedPostDecimalDigits: [Int]) -> SplitNumber {
-            return SplitNumber(preDecimalDigits: preDecimalDigits, postDecimalDigits: updatedPostDecimalDigits)
+        /// Returns a new `SplitNumber` with updated fractional digits
+        func with(updatedFractionalDigits: [Int]) -> SplitNumber {
+            return SplitNumber(integerDigits: integerDigits, fractionalDigits: updatedFractionalDigits)
         }
         
-        func addingNumberToPreDecimalDigits(_ number: Int) -> SplitNumber {
-            return SplitNumber(preDecimalDigits: preDecimalDigits + [number], postDecimalDigits: postDecimalDigits)
+        /// Returns a new `SplitNumber` with  the given number added to the integer digits
+        func addingNumberToIntegerDigits(_ number: Int) -> SplitNumber {
+            return SplitNumber(integerDigits: integerDigits + [number], fractionalDigits: fractionalDigits)
         }
         
-        func addingNumberToPostDecimalDigits(_ number: Int) -> SplitNumber {
-            return SplitNumber(preDecimalDigits: preDecimalDigits, postDecimalDigits: postDecimalDigits + [number])
+        /// Returns a new `SplitNumber` with  the given number added to the fractional digits
+        func addingNumberToFractionalDigits(_ number: Int) -> SplitNumber {
+            return SplitNumber(integerDigits: integerDigits, fractionalDigits: fractionalDigits + [number])
         }
         
+    }
+    
+    enum DigitType {
+        case integer
+        case fractional
     }
     
 }
 
+/// A View for an individual key in the `NumberEntryView`
 fileprivate struct NumberEntryKeyView: View {
     
     private static let numberFormatter: NumberFormatter = NumberFormatter()
@@ -290,6 +361,7 @@ fileprivate struct NumberEntryKeyView: View {
                 .frame(maxWidth: 80, maxHeight: 80, alignment: .center)
                 .background(Color(UIColor.secondarySystemBackground))
                 .clipShape(Circle())
+                .accessibility(label: Text(self.accessibilityLabel(for: key)))
         }.buttonStyle(PlainButtonStyle())
     }
     
@@ -322,12 +394,42 @@ fileprivate struct NumberEntryKeyView: View {
         }
     }
     
+    private func accessibilityLabel(for key: Key) -> String {
+        switch key {
+        case .zero:
+            return "0"
+        case .one:
+            return "1"
+        case .two:
+            return "2"
+        case .three:
+            return "3"
+        case .four:
+            return "4"
+        case .five:
+            return "5"
+        case .six:
+            return "6"
+        case .seven:
+            return "7"
+        case .eight:
+            return "8"
+        case .nine:
+            return "9"
+        case .decimalPoint:
+            return "Decimal Point"
+        case .clear:
+            return "Clear"
+        }
+    }
+    
 }
 
 //MARK: - Models
 
 extension NumberEntryKeyView {
     
+    /// Represents the different key types that can be used in the `NumberEntryView`
     enum Key: Hashable {
         
         case zero
@@ -344,7 +446,6 @@ extension NumberEntryKeyView {
         case clear
         
     }
-    
     
 }
 
