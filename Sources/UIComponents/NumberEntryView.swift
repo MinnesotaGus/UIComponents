@@ -1,5 +1,5 @@
 //
-//  NumberField.swift
+//  NumberEntryView.swift
 //  
 //
 //  Created by Jordan Gustafson on 6/19/20.
@@ -7,98 +7,110 @@
 
 import SwiftUI
 
-public struct NumberField: View {
+public struct NumberEntryView: View {
     
-    @ObservedObject private var viewModel: NumberFieldViewModel
+    @ObservedObject private var viewModel: NumberEntryViewModel
+    
+    @Environment(\.verticalSizeClass) var verticalSizeClass: UserInterfaceSizeClass?
     
     public var body: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            HStack {
+        GeometryReader { proxy in
+            VStack(spacing: self.spacing()) {
                 Spacer()
-                Text(viewModel.displayNumber)
+                self.numberDisplayRow()
+                self.keyRow(with: [.seven, .eight, .nine])
+                self.keyRow(with: [.four, .five, .six])
+                self.keyRow(with: [.one, .two, .three])
+                self.keyRow(with: [.decimalPoint, .zero, .clear])
+            }
+            .frame(width: self.containerWidth(for: proxy))
+        }
+        .overlay(self.closeButton(), alignment: .topLeading)
+        .padding()
+        
+    }
+    
+    public init(number: Binding<Double>, description: String?, closeTappedAction: (() -> Void)?) {
+        self.viewModel = NumberEntryViewModel(number: number, description: description, closeTappedAction: closeTappedAction)
+    }
+
+    
+    private func numberDisplayRow() -> some View {
+        HStack {
+            Spacer()
+            VStack(alignment: .trailing) {
+                viewModel.description.flatMap { text in
+                    Text(text)
+                        .font(.headline)
+                        .multilineTextAlignment(.trailing)
+                }
+                Text(self.viewModel.displayNumber)
                     .font(Font.largeTitle.monospacedDigit())
                     .multilineTextAlignment(.trailing)
                     .lineLimit(1)
             }
-            HStack {
-                Spacer()
-                NumberFieldKey(key: .seven) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer().frame(width: 16)
-                NumberFieldKey(key: .eight) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer().frame(width: 16)
-                NumberFieldKey(key: .nine) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer()
-            }
-            HStack {
-                Spacer()
-                NumberFieldKey(key: .four) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer().frame(width: 16)
-                NumberFieldKey(key: .five) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer().frame(width: 16)
-                NumberFieldKey(key: .six) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer()
-            }
-            HStack {
-                Spacer()
-                NumberFieldKey(key: .one) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer().frame(width: 16)
-                NumberFieldKey(key: .two) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer().frame(width: 16)
-                NumberFieldKey(key: .three) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer()
-            }
-            HStack {
-                Spacer()
-                NumberFieldKey(key: .decimalPoint) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer().frame(width: 16)
-                NumberFieldKey(key: .zero) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer().frame(width: 16)
-                NumberFieldKey(key: .clear) { key in
-                    self.viewModel.tapped(key: key)
-                }
-                Spacer()
-            }
-        }.padding()
+        }
+        .roundedPaddedBackground()
     }
     
-    public init(number: Binding<Double>) {
-        self.viewModel = NumberFieldViewModel(number: number)
+    private func keyRow(with keys: [NumberEntryKeyView.Key]) -> some View {
+        HStack(spacing: spacing()) {
+            ForEach(keys, id: \.self) { key in
+                NumberEntryKeyView(key: key) { key in
+                    self.viewModel.tapped(key: key)
+                }
+            }
+        }
+    }
+    
+    private func closeButton() -> some View {
+        viewModel.closeTappedAction.flatMap { _ in
+            Button(action: {
+                self.viewModel.closeTapped()
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .renderingMode(.template)
+                    .font(.largeTitle)
+                    .accentColor(Color(UIColor.gray))
+            }
+        }
+    }
+    
+    //MARK: - UI Values
+    
+    private func spacing() -> CGFloat {
+        switch verticalSizeClass {
+        case .compact:
+            return 8
+        case .regular:
+            return 8
+        case nil:
+            return 8
+        @unknown default:
+            return 8
+        }
+    }
+    
+    private func containerWidth(for proxy: GeometryProxy) -> CGFloat {
+        if (proxy.size.width + (spacing() * 2.0)) > 256 {
+            return 256
+        } else {
+            return proxy.size.width
+        }
     }
     
 }
 
-fileprivate class NumberFieldViewModel: ObservableObject {
+fileprivate class NumberEntryViewModel: ObservableObject {
+    
+    let description: String?
+    let closeTappedAction: (() -> Void)?
     
     @Published var displayNumber: String = ""
     
     private let number: Binding<Double>
     
-    private let decimalPrecision: Int = 3
-    
-    private var editingPlace: EditingPlace
+    private var editingPlace: EditingLocation
     
     private var splitNumber: SplitNumber {
         didSet {
@@ -111,21 +123,23 @@ fileprivate class NumberFieldViewModel: ObservableObject {
         return formatter
     }()
     
-    init(number: Binding<Double>) {
+    init(number: Binding<Double>, description: String?, closeTappedAction: (() -> Void)?) {
         self.number = number
+        self.description = description
+        self.closeTappedAction = closeTappedAction
         let splitNumber = SplitNumber(number: number.wrappedValue)
         self.splitNumber = splitNumber
         if !splitNumber.postDecimalDigits.isEmpty && splitNumber.postDecimalDigits[0] != 0 {
-            editingPlace = .trailing
+            editingPlace = .postDecimal
         } else {
-            editingPlace = .leading
+            editingPlace = .preDecimal
         }
         
         numberFormatter.maximumFractionDigits = splitNumber.postDecimalDigits.count
         displayNumber = numberFormatter.string(from: NSNumber(value: number.wrappedValue)) ?? "0.0"
     }
     
-    func tapped(key: NumberFieldKey.Key) {
+    func tapped(key: NumberEntryKeyView.Key) {
         switch key {
         case .zero:
             append(number: 0)
@@ -151,21 +165,25 @@ fileprivate class NumberFieldViewModel: ObservableObject {
             if splitNumber.preDecimalDigits.isEmpty {
                 splitNumber = splitNumber.with(updatedPreDecimalDigits: [])
             }
-            editingPlace = .trailing
+            editingPlace = .postDecimal
             updateNumber()
         case .clear:
             splitNumber = SplitNumber(preDecimalDigits: [], postDecimalDigits: [])
         }
     }
     
+    func closeTapped() {
+        closeTappedAction?()
+    }
+    
     private func append(number: Int) {
         switch editingPlace {
-        case .leading:
+        case .preDecimal:
             if splitNumber.preDecimalDigits.count == 1 && splitNumber.preDecimalDigits[0] == 0 {
                 splitNumber = splitNumber.with(updatedPreDecimalDigits: [])
             }
             splitNumber = splitNumber.addingNumberToPreDecimalDigits(number)
-        case .trailing:
+        case .postDecimal:
             if splitNumber.postDecimalDigits.count == 1 && splitNumber.postDecimalDigits[0] == 0 {
                 splitNumber = splitNumber.with(updatedPostDecimalDigits: [])
             }
@@ -197,16 +215,16 @@ fileprivate class NumberFieldViewModel: ObservableObject {
             number.wrappedValue = newNumber
         }
         let formattedNumber = numberFormatter.string(from: NSNumber(value: newNumber)) ?? "0"
-        if !formattedNumber.contains(".") && editingPlace == .trailing {
+        if !formattedNumber.contains(".") && editingPlace == .postDecimal {
             displayNumber = formattedNumber + "."
         } else {
             displayNumber = formattedNumber
         }
     }
     
-    enum EditingPlace {
-        case leading
-        case trailing
+    enum EditingLocation {
+        case preDecimal
+        case postDecimal
     }
     
     struct SplitNumber {
@@ -256,7 +274,7 @@ fileprivate class NumberFieldViewModel: ObservableObject {
     
 }
 
-fileprivate struct NumberFieldKey: View {
+fileprivate struct NumberEntryKeyView: View {
     
     private static let numberFormatter: NumberFormatter = NumberFormatter()
     
@@ -269,7 +287,7 @@ fileprivate struct NumberFieldKey: View {
         }) {
             Text(textValue(for: key))
                 .font(Font.largeTitle.monospacedDigit())
-                .frame(minWidth: 80, minHeight: 80, alignment: .center)
+                .frame(maxWidth: 80, maxHeight: 80, alignment: .center)
                 .background(Color(UIColor.secondarySystemBackground))
                 .clipShape(Circle())
         }.buttonStyle(PlainButtonStyle())
@@ -308,9 +326,9 @@ fileprivate struct NumberFieldKey: View {
 
 //MARK: - Models
 
-extension NumberFieldKey {
+extension NumberEntryKeyView {
     
-    enum Key {
+    enum Key: Hashable {
         
         case zero
         case one
