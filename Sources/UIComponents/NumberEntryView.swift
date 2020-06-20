@@ -7,76 +7,32 @@
 
 import SwiftUI
 
-/// A field for displaying and editing a number
-public struct NumberField: View {
-    
-    let number: Binding<Double>
-    let descriptionText: String?
-    
-    @State private var isEditingNumber: Bool = false
-    
-    public var body: some View {
-        VStack(alignment: .leading) {
-            descriptionText.flatMap { text in
-                Text(text)
-                    .id("Header")
-                    .font(.caption)
-                    .animation(.easeInOut)
-                    .transition(.opacity)
-            }
-            Text("\(number.wrappedValue)")
-                .font(.body)
-                .multilineTextAlignment(.leading)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4))
-                .background(Color(UIColor.systemBackground))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(UIColor.secondaryLabel), lineWidth: 1))
-        }.onTapGesture {
-            self.isEditingNumber = true
-        }.sheet(isPresented: $isEditingNumber) {
-            NumberEntryView(number: self.number, descriptionText: self.descriptionText) {
-                self.isEditingNumber = false
-            }
-        }
-    }
-    
-    public init(number: Binding<Double>, descriptionText: String?) {
-        self.number = number
-        self.descriptionText = descriptionText
-    }
-    
-}
-
 /// A view that can be used to enter/edit a number
 public struct NumberEntryView: View {
     
     @ObservedObject private var viewModel: NumberEntryViewModel
     
-    @Environment(\.verticalSizeClass) var verticalSizeClass: UserInterfaceSizeClass?
-    
     public var body: some View {
         GeometryReader { proxy in
-            VStack(spacing: self.spacing()) {
-                Spacer()
+            VStack(alignment: .center, spacing: 0.0) {
                 self.numberDisplayRow()
                 self.keyRow(with: [.seven, .eight, .nine])
                 self.keyRow(with: [.four, .five, .six])
                 self.keyRow(with: [.one, .two, .three])
                 self.keyRow(with: [.decimalPoint, .zero, .clear])
+                self.enterRow()
             }
             .frame(width: self.containerWidth(for: proxy))
+            .fixedSize()
+            .background(Color(UIColor.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
-        .overlay(self.closeButton(), alignment: .topLeading)
-        .padding()
-        
     }
     
     public init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
         self.viewModel = NumberEntryViewModel(number: number, descriptionText: descriptionText, closeTappedAction: closeTappedAction)
     }
 
-    
     private func numberDisplayRow() -> some View {
         HStack {
             Spacer()
@@ -91,56 +47,47 @@ public struct NumberEntryView: View {
                     .multilineTextAlignment(.trailing)
                     .lineLimit(1)
                     .minimumScaleFactor(0.1)
-            }
+            }.padding(Edge.Set(arrayLiteral: [.leading, .top, .trailing]), 8)
         }
-        .roundedPaddedBackground()
     }
     
     private func keyRow(with keys: [NumberEntryKeyView.Key]) -> some View {
-        HStack(spacing: spacing()) {
-            ForEach(keys, id: \.self) { key in
-                NumberEntryKeyView(key: key) { key in
-                    self.viewModel.tapped(key: key)
+        VStack(spacing: 0) {
+            Color.gray.frame(height: 1)
+            HStack(spacing: 0) {
+                ForEach(0..<keys.count) { index in
+                    HStack(spacing: 0) {
+                        NumberEntryKeyView(key: keys[index]) { key in
+                            self.viewModel.tapped(key: key)
+                        }
+                        if index != (keys.count - 1) {
+                            Color.gray.frame(width: 1)
+                        }
+                    }
                 }
             }
         }
     }
     
-    private func closeButton() -> some View {
-        viewModel.closeTappedAction.flatMap { _ in
+    private func enterRow() -> some View {
+        VStack(spacing: 0) {
+            Color.gray.frame(height: 1)
             Button(action: {
                 self.viewModel.closeTapped()
             }) {
-                Image(systemName: "xmark.circle.fill")
-                    .renderingMode(.template)
-                    .font(.largeTitle)
-                    .accentColor(Color(UIColor.gray))
-                    .accessibility(label: Text("Close"))
-            }
+                Text("Enter")
+                    .font(.headline)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color(UIColor.secondarySystemBackground))
+            }.buttonStyle(PlainButtonStyle())
         }
     }
-    
-    //MARK: - UI Values
-    
-    
-    /// Returns the spacing between the keys
-    private func spacing() -> CGFloat {
-        switch verticalSizeClass {
-        case .compact:
-            return 8
-        case .regular:
-            return 8
-        case nil:
-            return 8
-        @unknown default:
-            return 8
-        }
-    }
-    
+
     /// Returns the width for `NumberEntryView` based on the available space
     /// - Parameter proxy: The proxy for the available space
     private func containerWidth(for proxy: GeometryProxy) -> CGFloat {
-        if (proxy.size.width + (spacing() * 2.0)) > 256 {
+        if (proxy.size.width) > 256 {
             return 256
         } else {
             return proxy.size.width
@@ -400,9 +347,8 @@ fileprivate struct NumberEntryKeyView: View {
         }) {
             Text(textValue(for: key))
                 .font(Font.largeTitle.monospacedDigit())
-                .frame(maxWidth: 80, maxHeight: 80, alignment: .center)
+                .frame(maxWidth: .infinity)
                 .background(Color(UIColor.secondarySystemBackground))
-                .clipShape(Circle())
                 .accessibility(label: Text(self.accessibilityLabel(for: key)))
         }.buttonStyle(PlainButtonStyle())
     }
