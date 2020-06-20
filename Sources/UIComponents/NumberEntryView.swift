@@ -10,8 +10,15 @@ import SwiftUI
 /// A field for displaying and editing a number
 public struct NumberField: View {
     
-    let number: Binding<Double>
-    let descriptionText: String?
+    private static let numberFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        return formatter
+    }()
+    
+    private let number: Binding<Double>
+    private let descriptionText: String?
+    
+    private var viewModel: NumberEntryViewModel?
     
     @State private var isEditingNumber: Bool = false
     
@@ -24,7 +31,7 @@ public struct NumberField: View {
                     .animation(.easeInOut)
                     .transition(.opacity)
             }
-            Text("\(number.wrappedValue)")
+            Text(numberString())
                 .font(.body)
                 .multilineTextAlignment(.leading)
                 .lineLimit(1)
@@ -44,6 +51,12 @@ public struct NumberField: View {
     public init(number: Binding<Double>, descriptionText: String?) {
         self.number = number
         self.descriptionText = descriptionText
+    }
+    
+    private func numberString() -> String {
+        let splitNumber = NumberEntryViewModel.SplitNumber(number: number.wrappedValue)
+        Self.numberFormatter.maximumFractionDigits = splitNumber.fractionalDigits.count
+        return Self.numberFormatter.string(from: NSNumber(value: number.wrappedValue)) ?? String(describing: number.wrappedValue)
     }
     
 }
@@ -77,6 +90,9 @@ public struct NumberEntryView: View {
         self.viewModel = NumberEntryViewModel(number: number, descriptionText: descriptionText, closeTappedAction: closeTappedAction)
     }
 
+    fileprivate init(viewModel: NumberEntryViewModel) {
+        self.viewModel = viewModel
+    }
     
     private func numberDisplayRow() -> some View {
         HStack {
@@ -153,7 +169,7 @@ public struct NumberEntryView: View {
 /// View Model for the `NumberEntryView`
 fileprivate class NumberEntryViewModel: ObservableObject {
     
-    private static let numberFormatter: NumberFormatter = {
+    static let numberFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         return formatter
     }()
