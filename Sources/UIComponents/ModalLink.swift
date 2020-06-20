@@ -20,7 +20,7 @@ public struct ModalLink<Content, Destination>: View where Content: View, Destina
             if self.isPresented.wrappedValue {
                 self.destination()
                     .transition(self.transition.transition)
-            }
+            } else {
                 self.content()
             }
         }
