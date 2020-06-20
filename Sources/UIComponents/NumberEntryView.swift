@@ -7,80 +7,24 @@
 
 import SwiftUI
 
-/// A field for displaying and editing a number
-public struct NumberField: View {
-    
-    let number: Binding<Double>
-    let descriptionText: String?
-    
-    @State private var isEditingNumber: Bool = false
-    
-    public var body: some View {
-        VStack(alignment: .leading) {
-            descriptionText.flatMap { text in
-                Text(text)
-                    .id("Header")
-                    .font(.caption)
-                    .animation(.easeInOut)
-                    .transition(.opacity)
-            }
-            Text("\(number.wrappedValue)")
-                .font(.body)
-                .multilineTextAlignment(.leading)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4))
-                .background(Color(UIColor.systemBackground))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(UIColor.secondaryLabel), lineWidth: 1))
-        }.onTapGesture {
-            withAnimation {
-                self.isEditingNumber = true
-            }
-        }.overlay(overlayed(), alignment: .center)
-    }
-    
-    public init(number: Binding<Double>, descriptionText: String?) {
-        self.number = number
-        self.descriptionText = descriptionText
-    }
-    
-    private func overlayed() -> some View {
-        VStack {
-            if isEditingNumber {
-                NumberEntryView(number: self.number, descriptionText: self.descriptionText) {
-                    withAnimation {
-                       self.isEditingNumber = false
-                    }
-                }.transition(AnyTransition.scale.combined(with: .opacity))
-            }
-        }
-    }
-    
-}
-
 /// A view that can be used to enter/edit a number
 public struct NumberEntryView: View {
     
     @ObservedObject private var viewModel: NumberEntryViewModel
-    
-    @Environment(\.verticalSizeClass) var verticalSizeClass: UserInterfaceSizeClass?
     
     public var body: some View {
         GeometryReader { proxy in
             VStack(alignment: .center, spacing: 0.0) {
                 self.numberDisplayRow()
                 self.keyRow(with: [.seven, .eight, .nine])
-                Color.gray.frame(height: 1)
                 self.keyRow(with: [.four, .five, .six])
-                Color.gray.frame(height: 1)
                 self.keyRow(with: [.one, .two, .three])
-                Color.gray.frame(height: 1)
                 self.keyRow(with: [.decimalPoint, .zero, .clear])
-                Color.gray.frame(height: 1)
                 self.enterRow()
             }
             .frame(width: self.containerWidth(for: proxy))
-            .background(Color.red)
+            .fixedSize()
+            .background(Color(UIColor.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
     }
@@ -108,14 +52,17 @@ public struct NumberEntryView: View {
     }
     
     private func keyRow(with keys: [NumberEntryKeyView.Key]) -> some View {
-        HStack(spacing: 0) {
-            ForEach(0..<keys.count) { index in
-                HStack(spacing: 0) {
-                    NumberEntryKeyView(key: keys[index]) { key in
-                        self.viewModel.tapped(key: key)
-                    }
-                    if index != (keys.count - 1) {
-                        Color.gray.frame(width: 1)
+        VStack(spacing: 0) {
+            Color.gray.frame(height: 1)
+            HStack(spacing: 0) {
+                ForEach(0..<keys.count) { index in
+                    HStack(spacing: 0) {
+                        NumberEntryKeyView(key: keys[index]) { key in
+                            self.viewModel.tapped(key: key)
+                        }
+                        if index != (keys.count - 1) {
+                            Color.gray.frame(width: 1)
+                        }
                     }
                 }
             }
@@ -123,15 +70,18 @@ public struct NumberEntryView: View {
     }
     
     private func enterRow() -> some View {
-        Button(action: {
-            self.viewModel.closeTapped()
-        }) {
-            Text("Enter")
-                .font(.headline)
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color(UIColor.secondarySystemBackground))
-        }.buttonStyle(PlainButtonStyle())
+        VStack(spacing: 0) {
+            Color.gray.frame(height: 1)
+            Button(action: {
+                self.viewModel.closeTapped()
+            }) {
+                Text("Enter")
+                    .font(.headline)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color(UIColor.secondarySystemBackground))
+            }.buttonStyle(PlainButtonStyle())
+        }
     }
 
     /// Returns the width for `NumberEntryView` based on the available space
