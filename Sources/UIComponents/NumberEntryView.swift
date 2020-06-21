@@ -18,8 +18,6 @@ public struct NumberField: View {
     private let number: Binding<Double>
     private let descriptionText: String?
     
-    private var viewModel: NumberEntryViewModel?
-    
     @State private var isEditingNumber: Bool = false
     
     public var body: some View {
@@ -88,10 +86,6 @@ public struct NumberEntryView: View {
     
     public init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
         self.viewModel = NumberEntryViewModel(number: number, descriptionText: descriptionText, closeTappedAction: closeTappedAction)
-    }
-
-    fileprivate init(viewModel: NumberEntryViewModel) {
-        self.viewModel = viewModel
     }
     
     private func numberDisplayRow() -> some View {
@@ -169,7 +163,7 @@ public struct NumberEntryView: View {
 /// View Model for the `NumberEntryView`
 fileprivate class NumberEntryViewModel: ObservableObject {
     
-    static let numberFormatter: NumberFormatter = {
+    private static let numberFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         return formatter
     }()
