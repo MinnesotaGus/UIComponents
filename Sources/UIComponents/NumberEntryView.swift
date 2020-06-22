@@ -5,9 +5,11 @@
 //  Created by Jordan Gustafson on 6/19/20.
 //
 
+import Combine
 import SwiftUI
 
 /// A field for displaying and editing a number
+@available(iOS 13.4, *)
 public struct NumberField: View {
     
     private static let numberFormatter: NumberFormatter = {
@@ -60,6 +62,7 @@ public struct NumberField: View {
 }
 
 /// A view that can be used to enter/edit a number
+@available(iOS 13.4, *)
 public struct NumberEntryView: View {
     
     @ObservedObject private var viewModel: NumberEntryViewModel
@@ -76,6 +79,7 @@ public struct NumberEntryView: View {
                 self.keyRow(with: [.one, .two, .three])
                 self.keyRow(with: [.decimalPoint, .zero, .clear])
                 Spacer()
+                KeyInputView(viewModel: self.viewModel.keyInputViewModel)
             }
             .frame(width: self.containerWidth(for: proxy))
         }
@@ -161,6 +165,7 @@ public struct NumberEntryView: View {
 }
 
 /// View Model for the `NumberEntryView`
+@available(iOS 13.4, *)
 fileprivate class NumberEntryViewModel: ObservableObject {
     
     private static let numberFormatter: NumberFormatter = {
@@ -170,6 +175,8 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     
     let descriptionText: String?
     let closeTappedAction: (() -> Void)?
+    
+    let keyInputViewModel: KeyInputViewModel
     
     @Published var displayNumber: String = ""
     
@@ -183,10 +190,13 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         }
     }
     
+    private var cancellables: Set<AnyCancellable> = Set()
+    
     init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
         self.number = number
         self.descriptionText = descriptionText
         self.closeTappedAction = closeTappedAction
+        self.keyInputViewModel = KeyInputViewModel(handledKeyCodes: Self.handledKeys)
         let splitNumber = SplitNumber(number: number.wrappedValue)
         self.splitNumber = splitNumber
         if splitNumber.hasFractionalDigits {
@@ -196,6 +206,16 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         }
         
         setDisplayNumber(for: number.wrappedValue, activeDigitType: activeDigitType)
+        
+        keyInputViewModel.eventPublisher.sink {[weak self] event in
+            guard let self = self else { return }
+            switch event {
+            case let .pressed(key):
+                self.handleHardwareKeyTap(key: key)
+            case .released:
+                break
+            }
+        }.store(in: &cancellables)
     }
     
     /// Call this method when a `Key` button is tapped
@@ -280,9 +300,44 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         }
     }
     
+    private func handleHardwareKeyTap(key: UIKey) {
+        switch key.keyCode {
+        case .keypad0, .keyboard0:
+            tapped(key: .zero)
+        case .keypad1, .keyboard1:
+            tapped(key: .one)
+        case .keypad2, .keyboard2:
+            tapped(key: .two)
+        case .keypad3, .keyboard3:
+            tapped(key: .three)
+        case .keypad4, .keyboard4:
+            tapped(key: .four)
+        case .keypad5, .keyboard5:
+            tapped(key: .five)
+        case .keypad6, .keyboard6:
+            tapped(key: .six)
+        case .keypad7, .keyboard7:
+            tapped(key: .seven)
+        case .keypad8, .keyboard8:
+            tapped(key: .eight)
+        case .keypad9, .keyboard9:
+            tapped(key: .nine)
+        case .keypadPeriod,
+             .keyboardPeriod,
+             .keypadComma,
+             .keyboardComma:
+            tapped(key: .decimalPoint)
+        case .keyboardDeleteOrBackspace:
+            tapped(key: .clear)
+        default:
+            break
+        }
+    }
+    
 }
 
 //MARK: - ViewModel Models
+@available(iOS 13.4, *)
 extension NumberEntryViewModel {
     
     /// Represents a number split into it's integer and fractional digits
@@ -393,6 +448,34 @@ extension NumberEntryViewModel {
         case integer
         case fractional
     }
+    
+    private static let handledKeys: Set<UIKeyboardHIDUsage> = {
+        return Set([.keypad0,
+                    .keypad1,
+                    .keypad2,
+                    .keypad3,
+                    .keypad4,
+                    .keypad5,
+                    .keypad6,
+                    .keypad7,
+                    .keypad8,
+                    .keypad9,
+                    .keypadPeriod,
+                    .keypadComma,
+                    .keyboard0,
+                    .keyboard1,
+                    .keyboard2,
+                    .keyboard3,
+                    .keyboard4,
+                    .keyboard5,
+                    .keyboard6,
+                    .keyboard7,
+                    .keyboard8,
+                    .keyboard9,
+                    .keyboardPeriod,
+                    .keyboardComma,
+                    .keyboardDeleteOrBackspace])
+    }()
     
 }
 
