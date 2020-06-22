@@ -11,24 +11,45 @@ import SwiftUI
 @available(iOS 13.4, *)
 public struct KeyInputView: UIViewControllerRepresentable {
     
-    private let viewModel: KeyInputViewModel
+    private let keyPressedAction: (UIKey) -> Void
+    
+    public func makeCoordinator() -> KeyCoordinator {
+        return KeyCoordinator()
+    }
     
     public func makeUIViewController(context: Context) -> KeyInputViewController {
-        return KeyInputViewController(viewModel: viewModel)
+        let viewController = KeyInputViewController()
+        viewController.eventPublisher.sink { (event) in
+            switch event {
+            case let .pressed(key):
+                self.keyPressedAction(key)
+            case .released:
+                break
+            }
+        }.store(in: &context.coordinator.cancellables)
+        return viewController
     }
     
     public func updateUIViewController(_ uiViewController: KeyInputViewController, context: Context) {
         //
     }
     
-    public init(viewModel: KeyInputViewModel) {
-        self.viewModel = viewModel
+    public init(keyPressedAction: @escaping (UIKey) -> Void) {
+        self.keyPressedAction = keyPressedAction
+    }
+    
+    public class KeyCoordinator {
+        
+        var cancellables: Set<AnyCancellable> = Set()
+        
+        
     }
     
 }
 
+
 @available(iOS 13.4, *)
-public final class KeyInputViewModel {
+public final class KeyInputViewController: UIViewController {
     
     public var eventPublisher: AnyPublisher<ViewEvent, Never> {
         return eventSubject.eraseToAnyPublisher()
@@ -36,54 +57,7 @@ public final class KeyInputViewModel {
     
     private let eventSubject: PassthroughSubject<ViewEvent, Never> = PassthroughSubject()
     
-    private let handledKeyCodes: Set<UIKeyboardHIDUsage>
-    
-    init(handledKeyCodes: Set<UIKeyboardHIDUsage>) {
-        self.handledKeyCodes = handledKeyCodes
-    }
-    
-    /// Call this when the user presses a key on the hardware keybaord
-    /// - Parameter key: The key that was pressed
-    /// - Returns: Whether or not the view model can handle the key press
-    func keyPressed(key: UIKey) -> Bool {
-        if handledKeyCodes.contains(key.keyCode) {
-            eventSubject.send(.pressed(key: key))
-            return true
-        } else {
-            return false
-        }
-    }
-    
-    /// Call this when the user releases a key on the hardware keybaord
-    /// - Parameter key: The key that was pressed
-    /// - Returns: Whether or not the view model can handle the key press
-    func keyReleased(key: UIKey) -> Bool {
-        if handledKeyCodes.contains(key.keyCode) {
-            eventSubject.send(.released(key: key))
-            return true
-        } else {
-            return false
-        }
-    }
-    
-    /// Defines the events that the view can publish
-    public enum ViewEvent {
-        /// Represents the event where a key on the hardware keyboard is pressed in
-        case pressed(key: UIKey)
-        /// Represents the event where a key on the hardware keyboard is released
-        case released(key: UIKey)
-    }
-    
-    
-}
-
-@available(iOS 13.4, *)
-public final class KeyInputViewController: UIViewController {
-    
-    private let viewModel: KeyInputViewModel
-    
-    init(viewModel: KeyInputViewModel) {
-        self.viewModel = viewModel
+    init() {
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -95,21 +69,21 @@ public final class KeyInputViewController: UIViewController {
     public override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         guard let key = presses.first?.key else { return }
 
-        let handledKeyPress = viewModel.keyPressed(key: key)
-        
-        if !handledKeyPress {
-            super.pressesBegan(presses, with: event)
-        }
+        eventSubject.send(.pressed(key: key))
     }
     
     public override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         guard let key = presses.first?.key else { return }
 
-        let handledKeyRelease = viewModel.keyReleased(key: key)
-        
-        if !handledKeyRelease {
-            super.pressesEnded(presses, with: event)
-        }
+        eventSubject.send(.released(key: key))
+    }
+    
+    /// Defines the events that the view can publish
+    public enum ViewEvent: Equatable {
+        /// Represents the event where a key on the hardware keyboard is pressed in
+        case pressed(key: UIKey)
+        /// Represents the event where a key on the hardware keyboard is released
+        case released(key: UIKey)
     }
     
 }

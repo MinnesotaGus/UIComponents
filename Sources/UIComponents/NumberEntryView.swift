@@ -79,13 +79,15 @@ public struct NumberEntryView: View {
                 self.keyRow(with: [.one, .two, .three])
                 self.keyRow(with: [.decimalPoint, .zero, .clear])
                 Spacer()
-                KeyInputView(viewModel: self.viewModel.keyInputViewModel)
+                KeyInputView { key in
+                    self.viewModel.handleHardwareKeyTap(key: key)
+                }
             }
+            
             .frame(width: self.containerWidth(for: proxy))
         }
         .overlay(self.closeButton(), alignment: .topLeading)
         .padding()
-        
     }
     
     public init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
@@ -176,8 +178,6 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     let descriptionText: String?
     let closeTappedAction: (() -> Void)?
     
-    let keyInputViewModel: KeyInputViewModel
-    
     @Published var displayNumber: String = ""
     
     private let number: Binding<Double>
@@ -190,13 +190,10 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         }
     }
     
-    private var cancellables: Set<AnyCancellable> = Set()
-    
     init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
         self.number = number
         self.descriptionText = descriptionText
         self.closeTappedAction = closeTappedAction
-        self.keyInputViewModel = KeyInputViewModel(handledKeyCodes: Self.handledKeys)
         let splitNumber = SplitNumber(number: number.wrappedValue)
         self.splitNumber = splitNumber
         if splitNumber.hasFractionalDigits {
@@ -206,16 +203,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         }
         
         setDisplayNumber(for: number.wrappedValue, activeDigitType: activeDigitType)
-        
-        keyInputViewModel.eventPublisher.sink {[weak self] event in
-            guard let self = self else { return }
-            switch event {
-            case let .pressed(key):
-                self.handleHardwareKeyTap(key: key)
-            case .released:
-                break
-            }
-        }.store(in: &cancellables)
+
     }
     
     /// Call this method when a `Key` button is tapped
@@ -300,7 +288,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         }
     }
     
-    private func handleHardwareKeyTap(key: UIKey) {
+    func handleHardwareKeyTap(key: UIKey) {
         switch key.keyCode {
         case .keypad0, .keyboard0:
             tapped(key: .zero)
@@ -449,7 +437,7 @@ extension NumberEntryViewModel {
         case fractional
     }
     
-    private static let handledKeys: Set<UIKeyboardHIDUsage> = {
+    fileprivate static let handledKeys: Set<UIKeyboardHIDUsage> = {
         return Set([.keypad0,
                     .keypad1,
                     .keypad2,
