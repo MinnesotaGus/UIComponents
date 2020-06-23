@@ -11,7 +11,7 @@ import SwiftUI
 @available(iOS 13.4, *)
 public struct KeyInputView: UIViewControllerRepresentable {
     
-    private let keyPressedAction: (UIKey) -> Void
+    private let keyEventAction: (KeyEvent) -> Void
     
     public func makeCoordinator() -> KeyCoordinator {
         return KeyCoordinator()
@@ -20,12 +20,7 @@ public struct KeyInputView: UIViewControllerRepresentable {
     public func makeUIViewController(context: Context) -> KeyInputViewController {
         let viewController = KeyInputViewController()
         viewController.eventPublisher.sink { (event) in
-            switch event {
-            case let .pressed(key):
-                self.keyPressedAction(key)
-            case .released:
-                break
-            }
+            self.keyEventAction(event)
         }.store(in: &context.coordinator.cancellables)
         return viewController
     }
@@ -34,15 +29,22 @@ public struct KeyInputView: UIViewControllerRepresentable {
         //
     }
     
-    public init(keyPressedAction: @escaping (UIKey) -> Void) {
-        self.keyPressedAction = keyPressedAction
+    public init(keyEventAction: @escaping (KeyEvent) -> Void) {
+        self.keyEventAction = keyEventAction
     }
     
     public class KeyCoordinator {
         
         var cancellables: Set<AnyCancellable> = Set()
         
-        
+    }
+    
+    /// Defines the events that the view can publish
+    public enum KeyEvent: Equatable {
+        /// Represents the event where a key on the hardware keyboard is pressed in
+        case pressed(key: UIKey)
+        /// Represents the event where a key on the hardware keyboard is released
+        case released(key: UIKey)
     }
     
 }
@@ -51,11 +53,11 @@ public struct KeyInputView: UIViewControllerRepresentable {
 @available(iOS 13.4, *)
 public final class KeyInputViewController: UIViewController {
     
-    public var eventPublisher: AnyPublisher<ViewEvent, Never> {
+    public var eventPublisher: AnyPublisher<KeyInputView.KeyEvent, Never> {
         return eventSubject.eraseToAnyPublisher()
     }
     
-    private let eventSubject: PassthroughSubject<ViewEvent, Never> = PassthroughSubject()
+    private let eventSubject: PassthroughSubject<KeyInputView.KeyEvent, Never> = PassthroughSubject()
     
     init() {
         super.init(nibName: nil, bundle: nil)
@@ -67,23 +69,21 @@ public final class KeyInputViewController: UIViewController {
     }
     
     public override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-        guard let key = presses.first?.key else { return }
+        guard let key = presses.first?.key else {
+            super.pressesBegan(presses, with: event)
+            return
+        }
 
         eventSubject.send(.pressed(key: key))
     }
     
     public override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-        guard let key = presses.first?.key else { return }
+        guard let key = presses.first?.key else {
+            super.pressesEnded(presses, with: event)
+            return
+        }
 
         eventSubject.send(.released(key: key))
-    }
-    
-    /// Defines the events that the view can publish
-    public enum ViewEvent: Equatable {
-        /// Represents the event where a key on the hardware keyboard is pressed in
-        case pressed(key: UIKey)
-        /// Represents the event where a key on the hardware keyboard is released
-        case released(key: UIKey)
     }
     
 }

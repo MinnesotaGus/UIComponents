@@ -79,12 +79,9 @@ public struct NumberEntryView: View {
                 self.keyRow(with: [.one, .two, .three])
                 self.keyRow(with: [.decimalPoint, .zero, .clear])
                 Spacer()
-                KeyInputView { key in
-                    self.viewModel.handleHardwareKeyTap(key: key)
-                }
             }
-            
             .frame(width: self.containerWidth(for: proxy))
+            .background(keyInputView())
         }
         .overlay(self.closeButton(), alignment: .topLeading)
         .padding()
@@ -133,6 +130,17 @@ public struct NumberEntryView: View {
                     .font(.largeTitle)
                     .accentColor(Color(UIColor.gray))
                     .accessibility(label: Text("Close"))
+            }
+        }
+    }
+    
+    private func keyInputView() -> some View {
+        KeyInputView { keyEvent in
+            switch keyEvent {
+            case let .pressed(key):
+                self.viewModel.handleHardwareKeyTap(key: key)
+            case .released:
+                break
             }
         }
     }
@@ -289,6 +297,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     }
     
     func handleHardwareKeyTap(key: UIKey) {
+        print(key.characters)
         switch key.keyCode {
         case .keypad0, .keyboard0:
             tapped(key: .zero)
