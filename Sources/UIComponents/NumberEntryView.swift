@@ -446,34 +446,6 @@ extension NumberEntryViewModel {
         case fractional
     }
     
-    fileprivate static let handledKeys: Set<UIKeyboardHIDUsage> = {
-        return Set([.keypad0,
-                    .keypad1,
-                    .keypad2,
-                    .keypad3,
-                    .keypad4,
-                    .keypad5,
-                    .keypad6,
-                    .keypad7,
-                    .keypad8,
-                    .keypad9,
-                    .keypadPeriod,
-                    .keypadComma,
-                    .keyboard0,
-                    .keyboard1,
-                    .keyboard2,
-                    .keyboard3,
-                    .keyboard4,
-                    .keyboard5,
-                    .keyboard6,
-                    .keyboard7,
-                    .keyboard8,
-                    .keyboard9,
-                    .keyboardPeriod,
-                    .keyboardComma,
-                    .keyboardDeleteOrBackspace])
-    }()
-    
 }
 
 /// A View for an individual key in the `NumberEntryView`
