@@ -5,9 +5,11 @@
 //  Created by Jordan Gustafson on 6/19/20.
 //
 
+import Combine
 import SwiftUI
 
 /// A field for displaying and editing a number
+@available(iOS 13.4, *)
 public struct NumberField: View {
     
     private static let numberFormatter: NumberFormatter = {
@@ -60,6 +62,7 @@ public struct NumberField: View {
 }
 
 /// A view that can be used to enter/edit a number
+@available(iOS 13.4, *)
 public struct NumberEntryView: View {
     
     @ObservedObject private var viewModel: NumberEntryViewModel
@@ -78,10 +81,10 @@ public struct NumberEntryView: View {
                 Spacer()
             }
             .frame(width: self.containerWidth(for: proxy))
+            .background(keyInputView())
         }
         .overlay(self.closeButton(), alignment: .topLeading)
         .padding()
-        
     }
     
     public init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
@@ -131,6 +134,17 @@ public struct NumberEntryView: View {
         }
     }
     
+    private func keyInputView() -> some View {
+        KeyInputView { keyEvent in
+            switch keyEvent {
+            case let .pressed(key):
+                self.viewModel.handleHardwareKeyTap(key: key)
+            case .released:
+                break
+            }
+        }
+    }
+    
     //MARK: - UI Values
     
     
@@ -161,6 +175,7 @@ public struct NumberEntryView: View {
 }
 
 /// View Model for the `NumberEntryView`
+@available(iOS 13.4, *)
 fileprivate class NumberEntryViewModel: ObservableObject {
     
     private static let numberFormatter: NumberFormatter = {
@@ -196,6 +211,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         }
         
         setDisplayNumber(for: number.wrappedValue, activeDigitType: activeDigitType)
+
     }
     
     /// Call this method when a `Key` button is tapped
@@ -280,9 +296,45 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         }
     }
     
+    func handleHardwareKeyTap(key: UIKey) {
+        print(key.characters)
+        switch key.keyCode {
+        case .keypad0, .keyboard0:
+            tapped(key: .zero)
+        case .keypad1, .keyboard1:
+            tapped(key: .one)
+        case .keypad2, .keyboard2:
+            tapped(key: .two)
+        case .keypad3, .keyboard3:
+            tapped(key: .three)
+        case .keypad4, .keyboard4:
+            tapped(key: .four)
+        case .keypad5, .keyboard5:
+            tapped(key: .five)
+        case .keypad6, .keyboard6:
+            tapped(key: .six)
+        case .keypad7, .keyboard7:
+            tapped(key: .seven)
+        case .keypad8, .keyboard8:
+            tapped(key: .eight)
+        case .keypad9, .keyboard9:
+            tapped(key: .nine)
+        case .keypadPeriod,
+             .keyboardPeriod,
+             .keypadComma,
+             .keyboardComma:
+            tapped(key: .decimalPoint)
+        case .keyboardDeleteOrBackspace:
+            tapped(key: .clear)
+        default:
+            break
+        }
+    }
+    
 }
 
 //MARK: - ViewModel Models
+@available(iOS 13.4, *)
 extension NumberEntryViewModel {
     
     /// Represents a number split into it's integer and fractional digits
