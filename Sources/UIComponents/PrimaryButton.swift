@@ -53,14 +53,16 @@ struct RoundedButton_Previews: PreviewProvider {
                 print("Save tapped")
             }) {
                 Text("Light mode")
-            }.previewLayout(.sizeThatFits).padding()
+            }
+            .previewLayout(.sizeThatFits).padding()
             
             PrimaryButton(action: {
                 print("Save tapped")
             }) {
                 Text("Dark mode")
-            }.environment(\.colorScheme, .dark)
-                .previewLayout(.sizeThatFits).padding()
+            }
+            .preferredColorScheme(.dark)
+            .previewLayout(.sizeThatFits).padding()
         }
     }
 }

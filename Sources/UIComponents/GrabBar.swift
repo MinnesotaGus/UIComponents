@@ -23,3 +23,23 @@ public struct GrabBar: View {
     
 }
 
+
+struct GrabBar_Previews: PreviewProvider {
+    
+    static var previews: some View {
+        Group {
+            Group {
+                GrabBar(color: .gray)
+                    .padding(/*@START_MENU_TOKEN@*/.all/*@END_MENU_TOKEN@*/, /*@START_MENU_TOKEN@*/10/*@END_MENU_TOKEN@*/)
+                    .previewLayout(.sizeThatFits)
+            }
+            
+            Group {
+                GrabBar(color: .gray)
+                    .padding(/*@START_MENU_TOKEN@*/.all/*@END_MENU_TOKEN@*/, /*@START_MENU_TOKEN@*/10/*@END_MENU_TOKEN@*/)
+                    .previewLayout(.sizeThatFits)
+            }.preferredColorScheme(.dark)
+        }
+    }
+    
+}

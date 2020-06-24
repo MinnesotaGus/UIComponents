@@ -41,6 +41,7 @@ public struct CellView<Content: View, Accesory: View>: View {
 //MARK: - Previews
 
 struct CellView_Previews: PreviewProvider {
+    
     static var previews: some View {
         Group {
             Group {
@@ -105,5 +106,6 @@ struct CellView_Previews: PreviewProvider {
             }.environment(\.colorScheme, .dark)
         }
     }
+    
 }
 

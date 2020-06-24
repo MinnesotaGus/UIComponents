@@ -9,7 +9,6 @@ import Combine
 import SwiftUI
 
 /// A field for displaying and editing a number
-@available(iOS 13.4, *)
 public struct NumberField: View {
     
     private static let numberFormatter: NumberFormatter = {
@@ -62,7 +61,6 @@ public struct NumberField: View {
 }
 
 /// A view that can be used to enter/edit a number
-@available(iOS 13.4, *)
 public struct NumberEntryView: View {
     
     @ObservedObject private var viewModel: NumberEntryViewModel
@@ -175,7 +173,6 @@ public struct NumberEntryView: View {
 }
 
 /// View Model for the `NumberEntryView`
-@available(iOS 13.4, *)
 fileprivate class NumberEntryViewModel: ObservableObject {
     
     private static let numberFormatter: NumberFormatter = {
@@ -334,7 +331,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
 }
 
 //MARK: - ViewModel Models
-@available(iOS 13.4, *)
+
 extension NumberEntryViewModel {
     
     /// Represents a number split into it's integer and fractional digits
@@ -530,6 +527,7 @@ fileprivate struct NumberEntryKeyView: View {
 }
 
 //MARK: - Models
+
 extension NumberEntryKeyView {
     
     /// Represents the different key types that can be used in the `NumberEntryView`
@@ -551,3 +549,31 @@ extension NumberEntryKeyView {
     }
     
 }
+
+
+struct NumberEntryView_Previews: PreviewProvider {
+    
+    static var previews: some View {
+        Group {
+            Group {
+                TestNumberField()
+            }
+            
+            Group {
+                TestNumberField()
+            }.environment(\.colorScheme, .dark)
+        }
+    }
+    
+    struct TestNumberField: View {
+
+        @State var number: Double = 0.0
+
+        var body: some View {
+            NumberField(number: $number, descriptionText: "Some number")
+        }
+
+    }
+    
+}
+

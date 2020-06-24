@@ -53,17 +53,35 @@ public struct CountdownTimerView: View {
     
 }
 
+@available(iOS 14.0, *)
 struct CountdownTimerView_Previews: PreviewProvider {
-    
-    @State static var currentTime: Double = 120.0
+
     
     static var previews: some View {
-        VStack {
-            CountdownTimerView(currentTime: currentTime,
-                               totalTime: 180,
-                               ringColor: .orange)
-                .padding()
-            Slider(value: Self.$currentTime, in: 0...180)
+        Group {
+            Group {
+                TestView()
+            }
+            
+            Group {
+                TestView()
+            }.preferredColorScheme(.dark)
+        }
+        
+    }
+    
+    struct TestView: View {
+        
+        @State var currentTime: Double = 120
+        
+        var body: some View {
+            VStack {
+                CountdownTimerView(currentTime: currentTime,
+                                   totalTime: 180,
+                                   ringColor: .orange)
+                    .padding()
+                Slider(value: $currentTime, in: 0...180)
+            }
         }
         
     }

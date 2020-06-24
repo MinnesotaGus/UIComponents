@@ -45,27 +45,28 @@ public struct ProgressRing: View {
 
 //MARK: - Previews
 
-struct TestView: View {
-    
-    @State private var sliderValue: Double = 0
-    
-    var body: some View {
-        VStack {
-            ProgressRing(value: $sliderValue.wrappedValue / 10,
-                         foregroundColor: .red,
-                         lineWidth: 10)
-                .frame(width: 128)
-            Slider(value: $sliderValue, in: 0...10)
-                .padding(30)
-        }.padding()
-    }
-    
-}
-
-struct TestView_Previews: PreviewProvider {
+struct ProgressRing_Previews: PreviewProvider {
     
     static var previews: some View {
         TestView().previewDevice(PreviewDevice(rawValue: "iPhone X"))
+    }
+    
+    
+    struct TestView: View {
+        
+        @State private var sliderValue: Double = 0
+        
+        var body: some View {
+            VStack {
+                ProgressRing(value: $sliderValue.wrappedValue / 10,
+                             foregroundColor: .red,
+                             lineWidth: 10)
+                    .frame(width: 128)
+                Slider(value: $sliderValue, in: 0...10)
+                    .padding(30)
+            }.padding()
+        }
+        
     }
     
 }
