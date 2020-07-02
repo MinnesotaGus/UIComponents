@@ -69,17 +69,21 @@ public struct NumberEntryView: View {
     
     public var body: some View {
         GeometryReader { proxy in
-            VStack(spacing: self.spacing()) {
+            HStack {
                 Spacer()
-                self.numberDisplayRow()
-                self.keyRow(with: [.seven, .eight, .nine])
-                self.keyRow(with: [.four, .five, .six])
-                self.keyRow(with: [.one, .two, .three])
-                self.keyRow(with: [.decimalPoint, .zero, .clear])
+                VStack(alignment: .center, spacing: spacing()) {
+                    Spacer()
+                    numberDisplayRow()
+                    keyRow(with: [.seven, .eight, .nine])
+                    keyRow(with: [.four, .five, .six])
+                    keyRow(with: [.one, .two, .three])
+                    keyRow(with: [.decimalPoint, .zero, .delete])
+                    Spacer()
+                }
+                .background(keyInputView())
+                .frame(width: self.containerWidth(for: proxy), alignment: .center)
                 Spacer()
             }
-            .frame(width: self.containerWidth(for: proxy))
-            .background(keyInputView())
         }
         .overlay(self.closeButton(), alignment: .topLeading)
         .padding()
@@ -237,13 +241,12 @@ fileprivate class NumberEntryViewModel: ObservableObject {
             numberTapped(9)
         case .decimalPoint:
             if splitNumber.integerDigits.isEmpty {
-                splitNumber = splitNumber.with(updatedIntegerDigits: [])
+                splitNumber = splitNumber.addingNumberToIntegerDigits(0)
             }
             activeDigitType = .fractional
             updateNumber()
-        case .clear:
-            //They hit clear, so let's clear out both the interger and the fractional digits
-            splitNumber = SplitNumber(integerDigits: [], fractionalDigits: [])
+        case .delete:
+            splitNumber = splitNumber.deletingLastDigit()
         }
     }
     
@@ -257,14 +260,8 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     private func numberTapped(_ number: Int) {
         switch activeDigitType {
         case .integer:
-            if splitNumber.integerDigits.count == 1 && splitNumber.integerDigits[0] == 0 {
-                splitNumber = splitNumber.with(updatedIntegerDigits: [])
-            }
             splitNumber = splitNumber.addingNumberToIntegerDigits(number)
         case .fractional:
-            if splitNumber.fractionalDigits.count == 1 && splitNumber.fractionalDigits[0] == 0 {
-                splitNumber = splitNumber.with(updatedFractionalDigits: [])
-            }
             splitNumber = splitNumber.addingNumberToFractionalDigits(number)
         }
     }
@@ -286,7 +283,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     private func setDisplayNumber(for number: Double, activeDigitType: DigitType) {
         Self.numberFormatter.maximumFractionDigits = splitNumber.fractionalDigits.count
         let formattedNumber = Self.numberFormatter.string(from: NSNumber(value: number)) ?? "0"
-        if !formattedNumber.contains(".") && activeDigitType == .fractional {
+        if activeDigitType == .fractional && splitNumber.fractionalDigits.isEmpty {
             displayNumber = formattedNumber + "."
         } else {
             displayNumber = formattedNumber
@@ -322,7 +319,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
              .keyboardComma:
             tapped(key: .decimalPoint)
         case .keyboardDeleteOrBackspace:
-            tapped(key: .clear)
+            tapped(key: .delete)
         default:
             break
         }
@@ -416,16 +413,6 @@ extension NumberEntryViewModel {
             self.fractionalDigits = fractionalDigits
         }
         
-        /// Returns a new `SplitNumber` with updated integer digits
-        func with(updatedIntegerDigits: [Int]) -> SplitNumber {
-            return SplitNumber(integerDigits: updatedIntegerDigits, fractionalDigits: fractionalDigits)
-        }
-        
-        /// Returns a new `SplitNumber` with updated fractional digits
-        func with(updatedFractionalDigits: [Int]) -> SplitNumber {
-            return SplitNumber(integerDigits: integerDigits, fractionalDigits: updatedFractionalDigits)
-        }
-        
         /// Returns a new `SplitNumber` with  the given number added to the integer digits
         func addingNumberToIntegerDigits(_ number: Int) -> SplitNumber {
             return SplitNumber(integerDigits: integerDigits + [number], fractionalDigits: fractionalDigits)
@@ -434,6 +421,16 @@ extension NumberEntryViewModel {
         /// Returns a new `SplitNumber` with  the given number added to the fractional digits
         func addingNumberToFractionalDigits(_ number: Int) -> SplitNumber {
             return SplitNumber(integerDigits: integerDigits, fractionalDigits: fractionalDigits + [number])
+        }
+        
+        func deletingLastDigit() -> SplitNumber {
+            if !fractionalDigits.isEmpty {
+                return SplitNumber(integerDigits: integerDigits, fractionalDigits: fractionalDigits.dropLast())
+            } else if !integerDigits.isEmpty {
+                return SplitNumber(integerDigits: integerDigits.dropLast(), fractionalDigits: [])
+            } else {
+                return SplitNumber(integerDigits: [], fractionalDigits: [])
+            }
         }
         
     }
@@ -457,13 +454,42 @@ fileprivate struct NumberEntryKeyView: View {
         Button(action: {
             self.action(self.key)
         }) {
-            Text(textValue(for: key))
-                .font(Font.largeTitle.monospacedDigit())
+            keyIconView(for: key)
                 .frame(maxWidth: 80, maxHeight: 80, alignment: .center)
                 .background(Color(UIColor.secondarySystemBackground))
                 .clipShape(Circle())
                 .accessibility(label: Text(self.accessibilityLabel(for: key)))
         }.buttonStyle(PlainButtonStyle())
+    }
+    
+    @ViewBuilder
+    private func keyIconView(for key: Key) -> some View {
+        switch key {
+        case .zero,
+             .one,
+             .two,
+             .three,
+             .four,
+             .five,
+             .six,
+             .seven,
+             .eight,
+             .nine,
+             .decimalPoint:
+            textView(for: key)
+        case .delete:
+            deleteImageView()
+        }
+    }
+    
+    private func deleteImageView() -> some View {
+        Image(systemName: "delete.left")
+            .font(Font.title.monospacedDigit())
+    }
+    
+    private func textView(for key: Key) -> some View {
+        Text(textValue(for: key))
+            .font(Font.largeTitle.monospacedDigit())
     }
     
     private func textValue(for key: Key) -> String {
@@ -490,8 +516,8 @@ fileprivate struct NumberEntryKeyView: View {
             return "9"
         case .decimalPoint:
             return Self.numberFormatter.decimalSeparator ?? "."
-        case .clear:
-            return "C"
+        case .delete:
+            return "D"
         }
     }
     
@@ -519,8 +545,8 @@ fileprivate struct NumberEntryKeyView: View {
             return "9"
         case .decimalPoint:
             return "Decimal Point"
-        case .clear:
-            return "Clear"
+        case .delete:
+            return "Delete"
         }
     }
     
@@ -544,28 +570,28 @@ extension NumberEntryKeyView {
         case eight
         case nine
         case decimalPoint
-        case clear
+        case delete
         
     }
     
 }
 
 
-struct NumberEntryView_Previews: PreviewProvider {
+struct NumberField_Previews: PreviewProvider {
     
     static var previews: some View {
         Group {
             Group {
-                TestNumberField()
+                NumberFieldPreview()
             }
             
             Group {
-                TestNumberField()
+                NumberFieldPreview()
             }.environment(\.colorScheme, .dark)
         }
     }
     
-    struct TestNumberField: View {
+    struct NumberFieldPreview: View {
 
         @State var number: Double = 0.0
 
@@ -573,6 +599,32 @@ struct NumberEntryView_Previews: PreviewProvider {
             NumberField(number: $number, descriptionText: "Some number")
         }
 
+    }
+    
+}
+
+struct NumberEntryView_Previews: PreviewProvider {
+    
+    static var previews: some View {
+        Group {
+            Group {
+                Preview()
+            }
+            
+            Group {
+                Preview()
+            }.preferredColorScheme(.dark)
+        }
+    }
+    
+    struct Preview: View {
+        
+        @State var number: Double = 0.0
+        
+        var body: some View {
+            NumberEntryView(number: $number, descriptionText: "Some Number", closeTappedAction: nil)
+        }
+        
     }
     
 }
