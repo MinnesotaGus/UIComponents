@@ -63,9 +63,9 @@ public struct NumberField: View {
 /// A view that can be used to enter/edit a number
 public struct NumberEntryView: View {
     
-    @ObservedObject private var viewModel: NumberEntryViewModel
+    @State private var viewModel: NumberEntryViewModel
     
-    @Environment(\.verticalSizeClass) var verticalSizeClass: UserInterfaceSizeClass?
+    @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
     
     public var body: some View {
         GeometryReader { proxy in
@@ -90,7 +90,7 @@ public struct NumberEntryView: View {
     }
     
     public init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
-        self.viewModel = NumberEntryViewModel(number: number, descriptionText: descriptionText, closeTappedAction: closeTappedAction)
+        self._viewModel = State(wrappedValue: NumberEntryViewModel(number: number, descriptionText: descriptionText, closeTappedAction: closeTappedAction))
     }
     
     private func numberDisplayRow() -> some View {
@@ -177,7 +177,7 @@ public struct NumberEntryView: View {
 }
 
 /// View Model for the `NumberEntryView`
-fileprivate class NumberEntryViewModel: ObservableObject {
+struct NumberEntryViewModel {
     
     private static let numberFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -188,7 +188,16 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     let descriptionText: String?
     let closeTappedAction: (() -> Void)?
     
-    @Published var displayNumber: String = ""
+    var displayNumber: String {
+        Self.numberFormatter.minimumFractionDigits = splitNumber.fractionalDigits.count
+        Self.numberFormatter.maximumFractionDigits = splitNumber.fractionalDigits.count
+        let formattedNumber = Self.numberFormatter.string(from: NSNumber(value: splitNumber.number)) ?? "0"
+        if activeDigitType == .fractional && splitNumber.fractionalDigits.isEmpty {
+            return formattedNumber + "."
+        } else {
+            return formattedNumber
+        }
+    }
     
     private let number: Binding<Double>
     
@@ -207,13 +216,11 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         } else {
             activeDigitType = .integer
         }
-        
-        setDisplayNumber(for: number.wrappedValue, activeDigitType: activeDigitType)
     }
     
     /// Call this method when a `Key` button is tapped
     /// - Parameter key: The `Key` that was tapped
-    func tapped(key: NumberEntryKeyView.Key) {
+    fileprivate mutating func tapped(key: NumberEntryKeyView.Key) {
         switch key {
         case .zero:
             numberTapped(0)
@@ -253,7 +260,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     
     /// Updates the split number with the newly added number
     /// - Parameter number: The number to update the split number with
-    private func numberTapped(_ number: Int) {
+    mutating private func numberTapped(_ number: Int) {
         switch activeDigitType {
         case .integer:
             splitNumber = splitNumber.addingNumberToIntegerDigits(number)
@@ -263,29 +270,12 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     }
     
     /// Call this when the state changes to calculate a new value for the number
-    private func updateNumber() {
+    mutating private func updateNumber() {
         let newNumber = splitNumber.number
         number.wrappedValue = newNumber
-        
-        setDisplayNumber(for: newNumber, activeDigitType: activeDigitType)
     }
     
-    /// Sets the `displayNumber` with the given number and active digit type
-    /// - Parameters:
-    ///   - number: The number to set
-    ///   - activeDigitType: The type of digit that is currently active
-    private func setDisplayNumber(for number: Double, activeDigitType: DigitType) {
-        Self.numberFormatter.minimumFractionDigits = splitNumber.fractionalDigits.count
-        Self.numberFormatter.maximumFractionDigits = splitNumber.fractionalDigits.count
-        let formattedNumber = Self.numberFormatter.string(from: NSNumber(value: number)) ?? "0"
-        if activeDigitType == .fractional && splitNumber.fractionalDigits.isEmpty {
-            displayNumber = formattedNumber + "."
-        } else {
-            displayNumber = formattedNumber
-        }
-    }
-    
-    func handleHardwareKeyTap(key: UIKey) {
+    mutating func handleHardwareKeyTap(key: UIKey) {
         print(key.characters)
         switch key.keyCode {
         case .keypad0, .keyboard0:
@@ -599,6 +589,7 @@ struct NumberField_Previews: PreviewProvider {
 
         var body: some View {
             NumberField(number: $number, descriptionText: "Some number")
+                .padding()
         }
 
     }
