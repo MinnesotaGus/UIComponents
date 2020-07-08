@@ -181,6 +181,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     
     private static let numberFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
+        formatter.generatesDecimalNumbers = true
         return formatter
     }()
     
@@ -193,11 +194,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     
     private var activeDigitType: DigitType
     
-    private var splitNumber: SplitNumber {
-        didSet {
-            updateNumber()
-        }
-    }
+    internal var splitNumber: SplitNumber
     
     init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
         self.number = number
@@ -205,14 +202,13 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         self.closeTappedAction = closeTappedAction
         let splitNumber = SplitNumber(number: number.wrappedValue)
         self.splitNumber = splitNumber
-        if splitNumber.hasFractionalDigits {
+        if splitNumber.hasNonZeroFractionalDigits {
             activeDigitType = .fractional
         } else {
             activeDigitType = .integer
         }
         
         setDisplayNumber(for: number.wrappedValue, activeDigitType: activeDigitType)
-
     }
     
     /// Call this method when a `Key` button is tapped
@@ -240,14 +236,14 @@ fileprivate class NumberEntryViewModel: ObservableObject {
         case .nine:
             numberTapped(9)
         case .decimalPoint:
-            if splitNumber.integerDigits.isEmpty {
-                splitNumber = splitNumber.addingNumberToIntegerDigits(0)
-            }
             activeDigitType = .fractional
-            updateNumber()
         case .delete:
+            if splitNumber.fractionalDigits.isEmpty {
+                activeDigitType = .integer
+            }
             splitNumber = splitNumber.deletingLastDigit()
         }
+        updateNumber()
     }
     
     /// Call this when the close button is tapped
@@ -269,9 +265,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     /// Call this when the state changes to calculate a new value for the number
     private func updateNumber() {
         let newNumber = splitNumber.number
-        if number.wrappedValue != newNumber {
-            number.wrappedValue = newNumber
-        }
+        number.wrappedValue = newNumber
         
         setDisplayNumber(for: newNumber, activeDigitType: activeDigitType)
     }
@@ -281,6 +275,7 @@ fileprivate class NumberEntryViewModel: ObservableObject {
     ///   - number: The number to set
     ///   - activeDigitType: The type of digit that is currently active
     private func setDisplayNumber(for number: Double, activeDigitType: DigitType) {
+        Self.numberFormatter.minimumFractionDigits = splitNumber.fractionalDigits.count
         Self.numberFormatter.maximumFractionDigits = splitNumber.fractionalDigits.count
         let formattedNumber = Self.numberFormatter.string(from: NSNumber(value: number)) ?? "0"
         if activeDigitType == .fractional && splitNumber.fractionalDigits.isEmpty {
@@ -332,15 +327,15 @@ fileprivate class NumberEntryViewModel: ObservableObject {
 extension NumberEntryViewModel {
     
     /// Represents a number split into it's integer and fractional digits
-    struct SplitNumber {
+    public struct SplitNumber {
         
         /// The digits before the decimal point
-        let integerDigits: [Int]
+        public let integerDigits: [Int]
         /// The digits after the decimal point
-        let fractionalDigits: [Int]
+        public let fractionalDigits: [Int]
         
         /// Returns the number made up of the integer and fractional digits
-        var number: Double {
+        public var number: Double {
             /// Calculate the value of the integer digits
             var integerDigitsValue: Double = 0.0
             let integerDigitsCount = integerDigits.count
@@ -371,18 +366,18 @@ extension NumberEntryViewModel {
         }
         
         /// Returns with whether or not the number has any integer digits with a non-zero value
-        var hasIntegerDigits: Bool {
+        public var hasNonZeroIntegerDigits: Bool {
             return !integerDigits.isEmpty && integerDigits.last != 0
         }
         
         /// Returns with whether or not the number has any fractional digits with a non-zero value
-        var hasFractionalDigits: Bool {
+        public var hasNonZeroFractionalDigits: Bool {
             return !fractionalDigits.isEmpty && fractionalDigits.first != 0
         }
         
         /// Intializes a `SplitNumber` with the given number
         /// - Parameter number: The number to generate the `SplitNumber` for
-        init(number: Double) {
+        public init(number: Double) {
             /// Convert it to a `String `
             let numberString = String(number)
             /// Split it on the decimal point
@@ -398,7 +393,11 @@ extension NumberEntryViewModel {
             /// Check to see fi there are fractional digits, if there are grab them
             if separated.count > 1, let trailingRounded = Int(String(separated[1])) {
                 let trailingPlaced = String(describing: trailingRounded).compactMap { Int(String($0)) }
-                fractionalDigits = trailingPlaced
+                if trailingPlaced != [0] {
+                    fractionalDigits = trailingPlaced
+                } else {
+                    fractionalDigits = []
+                }
             } else {
                 fractionalDigits = []
             }
@@ -408,22 +407,25 @@ extension NumberEntryViewModel {
         /// - Parameters:
         ///   - integerDigits: The digits before the decimal point
         ///   - fractionalDigits: The digits after the decimal point
-        init(integerDigits: [Int], fractionalDigits: [Int]) {
+        public init(integerDigits: [Int], fractionalDigits: [Int]) {
             self.integerDigits = integerDigits
             self.fractionalDigits = fractionalDigits
         }
         
         /// Returns a new `SplitNumber` with  the given number added to the integer digits
-        func addingNumberToIntegerDigits(_ number: Int) -> SplitNumber {
-            return SplitNumber(integerDigits: integerDigits + [number], fractionalDigits: fractionalDigits)
+        public func addingNumberToIntegerDigits(_ number: Int) -> SplitNumber {
+            let fixed = integerDigits != [0] ? integerDigits : []
+            return SplitNumber(integerDigits: fixed + [number], fractionalDigits: fractionalDigits)
         }
         
         /// Returns a new `SplitNumber` with  the given number added to the fractional digits
-        func addingNumberToFractionalDigits(_ number: Int) -> SplitNumber {
-            return SplitNumber(integerDigits: integerDigits, fractionalDigits: fractionalDigits + [number])
+        public func addingNumberToFractionalDigits(_ number: Int) -> SplitNumber {
+            let fixedInteger = integerDigits == [] ? [0] : integerDigits
+            return SplitNumber(integerDigits: fixedInteger, fractionalDigits: fractionalDigits + [number])
         }
         
-        func deletingLastDigit() -> SplitNumber {
+        /// Returns a new `SplitNumber` with the last digit deleted
+        public func deletingLastDigit() -> SplitNumber {
             if !fractionalDigits.isEmpty {
                 return SplitNumber(integerDigits: integerDigits, fractionalDigits: fractionalDigits.dropLast())
             } else if !integerDigits.isEmpty {
@@ -434,7 +436,7 @@ extension NumberEntryViewModel {
         }
         
     }
-    
+
     enum DigitType {
         case integer
         case fractional
@@ -452,13 +454,13 @@ fileprivate struct NumberEntryKeyView: View {
     
     var body: some View {
         Button(action: {
-            self.action(self.key)
+            action(key)
         }) {
             keyIconView(for: key)
                 .frame(maxWidth: 80, maxHeight: 80, alignment: .center)
                 .background(Color(UIColor.secondarySystemBackground))
                 .clipShape(Circle())
-                .accessibility(label: Text(self.accessibilityLabel(for: key)))
+                .accessibility(label: Text(accessibilityLabel(for: key)))
         }.buttonStyle(PlainButtonStyle())
     }
     
