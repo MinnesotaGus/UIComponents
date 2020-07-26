@@ -23,15 +23,18 @@ public struct RoundedPaddedBackgroundModifier: ViewModifier {
         self.cornerRadius = cornerRadius
     }
     
+    @ViewBuilder
     public func body(content: Content) -> some View {
         if let paddingInsets = paddingInsets {
-            return AnyView(content.padding(paddingInsets)
+            content
+                .padding(paddingInsets)
                 .background(backgroundColor)
-                .cornerRadius(cornerRadius))
+                .cornerRadius(cornerRadius)
         } else {
-            return AnyView(content.padding()
+            content
+                .padding()
                 .background(backgroundColor)
-                .cornerRadius(cornerRadius))
+                .cornerRadius(cornerRadius)
         }
     }
     

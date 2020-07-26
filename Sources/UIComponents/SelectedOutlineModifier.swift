@@ -22,13 +22,14 @@ public struct SelectedOutlineModifier: ViewModifier {
         self.cornerRadius = cornerRadius
     }
     
+    @ViewBuilder
     public func body(content: Content) -> some View {
         if isSelected {
-            return AnyView(content.overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(selectedColor, lineWidth: 1))).id(changeId())
+            content
+                .overlay(RoundedRectangle(cornerRadius: cornerRadius)
+                            .stroke(selectedColor, lineWidth: 1))
         } else {
-            return AnyView(content).id(changeId())
+            content
         }
     }
     

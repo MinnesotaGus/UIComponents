@@ -16,11 +16,13 @@ public struct BackwardsCompatibleHoverEffectModifier: ViewModifier {
         self.effect = effect
     }
     
+    @ViewBuilder
     public func body(content: Content) -> some View {
         if #available(iOS 13.4, *) {
-            return AnyView(content.hoverEffect(effect.hoverEffect))
+            content
+                .hoverEffect(effect.hoverEffect)
         } else {
-            return AnyView(content)
+            content
         }
     }
     
