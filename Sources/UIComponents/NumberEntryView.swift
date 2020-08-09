@@ -17,14 +17,15 @@ public struct NumberField: View {
     }()
     
     private let number: Binding<Double>
-    private let descriptionText: String?
+    private let passiveDescriptionText: String?
+    private let activeDescriptionText: String?
     
     @State private var isEditingNumber: Bool = false
     
     public var body: some View {
-        VStack(alignment: .leading) {
-            descriptionText.flatMap { text in
-                Text(text)
+        VStack(alignment: .leading, spacing: 2) {
+            if let passiveDescriptionText = passiveDescriptionText {
+                Text(passiveDescriptionText)
                     .id("Header")
                     .font(.caption)
                     .animation(.easeInOut)
@@ -41,15 +42,16 @@ public struct NumberField: View {
         }.onTapGesture {
             self.isEditingNumber = true
         }.sheet(isPresented: $isEditingNumber) {
-            NumberEntryView(number: self.number, descriptionText: self.descriptionText) {
+            NumberEntryView(number: number, descriptionText: activeDescriptionText) {
                 self.isEditingNumber = false
             }
         }
     }
     
-    public init(number: Binding<Double>, descriptionText: String?) {
+    public init(number: Binding<Double>, passiveDescriptionText: String?, activeDescriptionText: String?) {
         self.number = number
-        self.descriptionText = descriptionText
+        self.passiveDescriptionText = passiveDescriptionText
+        self.activeDescriptionText = activeDescriptionText
     }
     
     private func numberString() -> String {
@@ -568,6 +570,7 @@ extension NumberEntryKeyView {
     
 }
 
+//MARK: - Previews
 
 struct NumberField_Previews: PreviewProvider {
     
@@ -579,16 +582,16 @@ struct NumberField_Previews: PreviewProvider {
             
             Group {
                 NumberFieldPreview()
-            }.environment(\.colorScheme, .dark)
+            }.preferredColorScheme(.dark)
         }
     }
     
     struct NumberFieldPreview: View {
 
-        @State var number: Double = 0.0
+        @State var number: Double = 36.0
 
         var body: some View {
-            NumberField(number: $number, descriptionText: "Some number")
+            NumberField(number: $number, passiveDescriptionText: "Bean Mass", activeDescriptionText: "Bean Mass (grams)")
                 .padding()
         }
 
