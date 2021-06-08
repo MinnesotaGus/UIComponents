@@ -63,7 +63,10 @@ public struct NumberField: View {
 }
 
 /// A view that can be used to enter/edit a number
-public struct NumberEntryView: View {
+public struct NumberEntryView<Unit: Identifiable & Hashable & UserFacingStringRepresentable>: View {
+    
+    private let selectedUnit: Binding<Unit>
+    private let options: [Unit]
     
     @State private var viewModel: NumberEntryViewModel
     
@@ -76,6 +79,9 @@ public struct NumberEntryView: View {
                 VStack(alignment: .center, spacing: spacing()) {
                     Spacer()
                     numberDisplayRow()
+                    if options.count > 1 {
+                        unitPickerView()
+                    }
                     keyRow(with: [.seven, .eight, .nine])
                     keyRow(with: [.four, .five, .six])
                     keyRow(with: [.one, .two, .three])
@@ -91,8 +97,10 @@ public struct NumberEntryView: View {
         .padding()
     }
     
-    public init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
+    init(number: Binding<Double>, descriptionText: String?, selectedUnit: Binding<Unit>, unitOptions: [Unit], closeTappedAction: (() -> Void)?) {
         self._viewModel = State(wrappedValue: NumberEntryViewModel(number: number, descriptionText: descriptionText, closeTappedAction: closeTappedAction))
+        self.selectedUnit = selectedUnit
+        self.options = unitOptions
     }
     
     private func numberDisplayRow() -> some View {
@@ -112,6 +120,14 @@ public struct NumberEntryView: View {
             }
         }
         .roundedPaddedBackground()
+    }
+    
+    private func unitPickerView() -> some View {
+        Picker(selection: selectedUnit, label: Text("Unit")) {
+            ForEach(options) { option in
+                Text(option.userFacingString)
+            }
+        }.pickerStyle(SegmentedPickerStyle())
     }
     
     private func keyRow(with keys: [NumberEntryKeyView.Key]) -> some View {
@@ -151,7 +167,6 @@ public struct NumberEntryView: View {
     
     //MARK: - UI Values
     
-    
     /// Returns the spacing between the keys
     private func spacing() -> CGFloat {
         switch verticalSizeClass {
@@ -175,8 +190,27 @@ public struct NumberEntryView: View {
             return proxy.size.width
         }
     }
+}
+
+//MARK: Default Init
+
+extension NumberEntryView where Unit == NeverUnit {
+    
+    public init(number: Binding<Double>, descriptionText: String?, closeTappedAction: (() -> Void)?) {
+        self.init(number: number, descriptionText: descriptionText,  selectedUnit: .constant(.none), unitOptions: [], closeTappedAction: closeTappedAction)
+    }
     
 }
+
+public enum NeverUnit: Identifiable, Hashable, CaseIterable, UserFacingStringRepresentable {
+    case none
+    
+    public var id: Self { self }
+    
+    public var userFacingString: String { String(describing: self) }
+}
+
+//MARK: - View Model
 
 /// View Model for the `NumberEntryView`
 struct NumberEntryViewModel {
@@ -614,14 +648,28 @@ struct NumberEntryView_Previews: PreviewProvider {
     }
     
     struct Preview: View {
-        
+        enum Unit: Identifiable, Hashable, UserFacingStringRepresentable, CaseIterable {
+            var id: Self { self }
+            
+            case ounces
+            case grams
+            
+            var userFacingString: String {
+                switch self {
+                case .ounces:
+                    return "Ounces"
+                case .grams:
+                    return "Grams"
+                }
+            }
+        }
+
+        @State var selection: Unit = .ounces
         @State var number: Double = 0.0
         
         var body: some View {
-            NumberEntryView(number: $number, descriptionText: "Some Number", closeTappedAction: nil)
+            NumberEntryView(number: $number, descriptionText: "Some Number", selectedUnit: $selection, unitOptions: Unit.allCases, closeTappedAction: nil)
         }
-        
     }
-    
 }
 
