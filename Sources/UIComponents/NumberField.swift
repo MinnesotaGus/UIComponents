@@ -40,7 +40,10 @@ public struct NumberField<Unit: NumberFieldUnit>: View {
         }.onTapGesture {
             self.isEditingNumber = true
         }.sheet(isPresented: $isEditingNumber) {
-            NumberEntryView(number: number, descriptionText: activeDescriptionText) {
+            NumberEntryView(number: number,
+                            descriptionText: activeDescriptionText,
+                            selectedUnit: selectedUnit,
+                            unitOptions: unitOptions) {
                 self.isEditingNumber = false
             }
         }
