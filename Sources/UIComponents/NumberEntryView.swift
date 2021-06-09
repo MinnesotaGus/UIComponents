@@ -8,65 +8,11 @@
 import Combine
 import SwiftUI
 
-/// A field for displaying and editing a number
-public struct NumberField: View {
-    
-    private static let numberFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        return formatter
-    }()
-    
-    private let number: Binding<Double>
-    private let passiveDescriptionText: String?
-    private let activeDescriptionText: String?
-    
-    @State private var isEditingNumber: Bool = false
-    
-    public var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if let passiveDescriptionText = passiveDescriptionText {
-                Text(passiveDescriptionText)
-                    .id("Header")
-                    .font(.caption)
-                    .animation(.easeInOut)
-                    .transition(.opacity)
-            }
-            Text(numberString())
-                .font(.body)
-                .multilineTextAlignment(.leading)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4))
-                .background(Color(UIColor.systemBackground))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(UIColor.secondaryLabel), lineWidth: 1))
-        }.onTapGesture {
-            self.isEditingNumber = true
-        }.sheet(isPresented: $isEditingNumber) {
-            NumberEntryView(number: number, descriptionText: activeDescriptionText) {
-                self.isEditingNumber = false
-            }
-        }
-    }
-    
-    public init(number: Binding<Double>, passiveDescriptionText: String?, activeDescriptionText: String?) {
-        self.number = number
-        self.passiveDescriptionText = passiveDescriptionText
-        self.activeDescriptionText = activeDescriptionText
-    }
-    
-    private func numberString() -> String {
-        let splitNumber = NumberEntryViewModel.SplitNumber(number: number.wrappedValue)
-        Self.numberFormatter.maximumFractionDigits = splitNumber.fractionalDigits.count
-        return Self.numberFormatter.string(from: NSNumber(value: number.wrappedValue)) ?? String(describing: number.wrappedValue)
-    }
-    
-}
-
 /// A view that can be used to enter/edit a number
-public struct NumberEntryView<Unit: Identifiable & Hashable & UserFacingStringRepresentable>: View {
+public struct NumberEntryView<Unit: NumberFieldUnit>: View {
     
     private let selectedUnit: Binding<Unit>
-    private let options: [Unit]
+    private let unitOptions: [Unit]
     
     @State private var viewModel: NumberEntryViewModel
     
@@ -79,7 +25,7 @@ public struct NumberEntryView<Unit: Identifiable & Hashable & UserFacingStringRe
                 VStack(alignment: .center, spacing: spacing()) {
                     Spacer()
                     numberDisplayRow()
-                    if options.count > 1 {
+                    if unitOptions.count > 1 {
                         unitPickerView()
                     }
                     keyRow(with: [.seven, .eight, .nine])
@@ -100,7 +46,7 @@ public struct NumberEntryView<Unit: Identifiable & Hashable & UserFacingStringRe
     init(number: Binding<Double>, descriptionText: String?, selectedUnit: Binding<Unit>, unitOptions: [Unit], closeTappedAction: (() -> Void)?) {
         self._viewModel = State(wrappedValue: NumberEntryViewModel(number: number, descriptionText: descriptionText, closeTappedAction: closeTappedAction))
         self.selectedUnit = selectedUnit
-        self.options = unitOptions
+        self.unitOptions = unitOptions
     }
     
     private func numberDisplayRow() -> some View {
@@ -124,7 +70,7 @@ public struct NumberEntryView<Unit: Identifiable & Hashable & UserFacingStringRe
     
     private func unitPickerView() -> some View {
         Picker(selection: selectedUnit, label: Text("Unit")) {
-            ForEach(options) { option in
+            ForEach(unitOptions) { option in
                 Text(option.userFacingString)
             }
         }.pickerStyle(SegmentedPickerStyle())
@@ -192,7 +138,7 @@ public struct NumberEntryView<Unit: Identifiable & Hashable & UserFacingStringRe
     }
 }
 
-//MARK: Default Init
+//MARK: - Default Init
 
 extension NumberEntryView where Unit == NeverUnit {
     
@@ -606,33 +552,6 @@ extension NumberEntryKeyView {
 
 //MARK: - Previews
 
-struct NumberField_Previews: PreviewProvider {
-    
-    static var previews: some View {
-        Group {
-            Group {
-                NumberFieldPreview()
-            }
-            
-            Group {
-                NumberFieldPreview()
-            }.preferredColorScheme(.dark)
-        }
-    }
-    
-    struct NumberFieldPreview: View {
-
-        @State var number: Double = 36.0
-
-        var body: some View {
-            NumberField(number: $number, passiveDescriptionText: "Bean Mass", activeDescriptionText: "Bean Mass (grams)")
-                .padding()
-        }
-
-    }
-    
-}
-
 struct NumberEntryView_Previews: PreviewProvider {
     
     static var previews: some View {
@@ -648,7 +567,7 @@ struct NumberEntryView_Previews: PreviewProvider {
     }
     
     struct Preview: View {
-        enum Unit: Identifiable, Hashable, UserFacingStringRepresentable, CaseIterable {
+        enum Unit: NumberFieldUnit, CaseIterable {
             var id: Self { self }
             
             case ounces
