@@ -58,7 +58,7 @@ public struct NumberEntryView<Unit: NumberFieldUnit>: View {
                         .font(.headline)
                         .multilineTextAlignment(.trailing)
                 }
-                Text(self.viewModel.displayNumber)
+                Text(viewModel.displayNumber)
                     .font(Font.largeTitle.monospacedDigit())
                     .multilineTextAlignment(.trailing)
                     .lineLimit(1)
@@ -567,27 +567,12 @@ struct NumberEntryView_Previews: PreviewProvider {
     }
     
     struct Preview: View {
-        enum Unit: NumberFieldUnit, CaseIterable {
-            var id: Self { self }
-            
-            case ounces
-            case grams
-            
-            var userFacingString: String {
-                switch self {
-                case .ounces:
-                    return "Ounces"
-                case .grams:
-                    return "Grams"
-                }
-            }
-        }
-
-        @State var selection: Unit = .ounces
+        let unitOptions: [PreviewContent.SelectableMassUnit] = [.ounces, .grams]
+        @State var selection: PreviewContent.SelectableMassUnit = .ounces
         @State var number: Double = 0.0
         
         var body: some View {
-            NumberEntryView(number: $number, descriptionText: "Some Number", selectedUnit: $selection, unitOptions: Unit.allCases, closeTappedAction: nil)
+            NumberEntryView(number: $number, descriptionText: "Some Number", selectedUnit: $selection, unitOptions: unitOptions, closeTappedAction: nil)
         }
     }
 }

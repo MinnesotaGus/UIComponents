@@ -5,6 +5,7 @@
 //  Created by Jordan Gustafson on 6/9/21.
 //
 
+import Foundation
 import SwiftUI
 
 public typealias NumberFieldUnit = Identifiable & Hashable & UserFacingStringRepresentable
@@ -104,14 +105,18 @@ struct NumberField_Previews: PreviewProvider {
     }
     
     struct NumberFieldPreview: View {
-
+        let selectableUnits: [PreviewContent.SelectableMassUnit] = [.grams, .ounces]
+        @State var selectedUnit: PreviewContent.SelectableMassUnit = .grams
         @State var number: Double = 36.0
 
         var body: some View {
-            NumberField(number: $number, passiveDescriptionText: "Bean Mass", activeDescriptionText: "Bean Mass (grams)")
+            NumberField(number: $number,
+                        passiveDescriptionText: "Bean Mass",
+                        activeDescriptionText: "Bean Mass",
+                        selectedUnit: $selectedUnit,
+                        unitOptions: selectableUnits)
                 .padding()
         }
 
     }
-    
 }
